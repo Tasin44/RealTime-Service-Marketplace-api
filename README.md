@@ -1,4 +1,4 @@
-# Chiripa Backend
+# RealTime Service Marketplace Backend
 
 Production-oriented Django backend for a service marketplace platform, built with a modular app architecture, real-time messaging, and payment-ready workflows.
 
