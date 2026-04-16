@@ -155,7 +155,7 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         List providers with advanced filtering
         Supports: country, category, rating, verification status, search
         """
-        queryset = self.get_queryset()
+        queryset = self.get_queryset().filter(user__role='provider')
         
         # Filter by country (case-insensitive exact match)
         country = request.query_params.get('country', None)
@@ -220,6 +220,7 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         queryset = ProviderProfile.objects.select_related(
             'user', 'service_category'
         ).filter(
+            user__role='provider',
             provider_done_work__gt=0  # Only providers with completed work
         )
         
@@ -393,6 +394,7 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         
         # Filter queryset by country (case-insensitive)
         queryset = self.get_queryset().filter(
+            user__role='provider',
             provider_country__iexact=country
         )
         

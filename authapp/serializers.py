@@ -6,14 +6,17 @@ from django.utils import timezone
 from datetime import timedelta
 import random
 import string
+import resend
 from .models import OTP
 from .utils import validate_and_get_otp
 from servicereceiverapp.models import ReceiverProfile
 from django.conf import settings
 
+resend.api_key = settings.RESEND_API_KEY
+
 User = get_user_model()
 
-
+print(settings.RESEND_API_KEY)
 class SignupSerializer(serializers.Serializer):
     email = serializers.EmailField()
     # name = serializers.CharField(max_length=150)
@@ -74,12 +77,32 @@ class SignupSerializer(serializers.Serializer):
         ReceiverProfile.objects.create(user=user)
         return user
 
+    '''
     @staticmethod
     def send_otp_email(email, otp_code):
-        subject = "Your OTP Code for Verification in Fixa"
+        subject = "Your OTP Code for Verification in Chiripa"
         message = f"Your OTP code is: {otp_code}\nValid for 10 minutes."
         send_mail(subject, message, 'noreply@yourdomain.com', [email])
+    '''
 
+    @staticmethod
+    def send_otp_email(email, otp_code):
+        try:
+            resend.Emails.send({
+                "from": "onboarding@resend.dev",  # must be verified domain in Resend
+                "to": [email],
+                "subject": "Your OTP Code for Verification in Chiripa",
+                "html": f"""
+                    <div style="font-family: Arial; padding: 20px;">
+                        <h2>OTP Verification</h2>
+                        <p>Your OTP code is:</p>
+                        <h1 style="letter-spacing: 5px;">{otp_code}</h1>
+                        <p>This code is valid for 10 minutes.</p>
+                    </div>
+                """
+            })
+        except Exception as e:
+            print("Resend email error:", str(e))
 
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
