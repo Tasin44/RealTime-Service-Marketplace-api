@@ -6,8 +6,17 @@ from serviceproviderapp.models import ProviderProfile
 from servicereceiverapp.models import ReceiverProfile
 from django.contrib.auth import get_user_model
 from django.utils.timesince import timesince
+from django.conf import settings
 
 User = get_user_model()
+
+
+def _absolute_media_url(request, file_field):
+    if not file_field:
+        return None
+    if request:
+        return request.build_absolute_uri(file_field.url)
+    return f"{settings.BASE_URL.rstrip('/')}{file_field.url}"
 
 # Basic user info serializer - prevents N+1 queries
 class UserBasicSerializer(serializers.ModelSerializer):
@@ -116,7 +125,10 @@ class ConversationListSerializer(serializers.ModelSerializer):
     
     '''
     def get_other_person(self, obj):
-        current_user = self.context['request'].user
+        request = self.context.get('request')
+        if not request:
+            return None
+        current_user = request.user
         
         # Return the OTHER person in conversation
         if obj.receiver.user == current_user:
@@ -131,7 +143,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
             'name': other.user.name,
             'email': other.user.email,
             # 'image': other.user.image.url if hasattr(other.user, 'image') and other.user.image else None
-            'image': other.user.image.url if other.user.image else None
+            'image': _absolute_media_url(request, other.user.image)
         }
         
     def get_expires_at(self, obj):  # ✅ New method
@@ -263,7 +275,10 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
             }
         
     def get_other_person(self, obj):
-        current_user = self.context['request'].user
+        request = self.context.get('request')
+        if not request:
+            return None
+        current_user = request.user
         
         # Return the OTHER person in conversation
         if obj.receiver.user == current_user:
@@ -278,13 +293,13 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
             'name': other.user.name,
             'email': other.user.email,
             # 'image': other.user.image.url if hasattr(other.user, 'image') and other.user.image else None
-            'image': other.user.image.url if other.user.image else None
+            'image': _absolute_media_url(request, other.user.image)
         }
     
     def get_messages(self, obj):
         # Get messages from prefetched data
         messages = obj.message_set.all().order_by('created_at')
-        return MessageSerializer(messages, many=True).data
+        return MessageSerializer(messages, many=True, context=self.context).data
     
     def get_expires_at(self, obj):  # ✅ Add this method
         if obj.conversation_status == 'expired':

@@ -256,7 +256,7 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         provider = self.get_object()
         images = ProviderWorkImage.objects.filter(provider=provider)
 
-        serializer = ProviderWorkImageUploadSerializer(images, many=True)
+        serializer = ProviderWorkImageUploadSerializer(images, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(

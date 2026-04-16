@@ -10,6 +10,14 @@ from django.conf import settings
 PLATFORM_COMMISSION = Decimal('0.05')  # 5% commission
 
 
+def _absolute_media_url(request, file_field):
+    if not file_field:
+        return None
+    if request:
+        return request.build_absolute_uri(file_field.url)
+    return f"{settings.BASE_URL.rstrip('/')}{file_field.url}"
+
+
 
 
 class ServiceCategorySerializer(serializers.ModelSerializer):
@@ -22,10 +30,7 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
         
     def get_category_image(self, obj):
         request = self.context.get('request')
-        if obj.category_image and request:
-            return f"{settings.BASE_URL}{obj.category_image.url}"
-            # return request.build_absolute_uri(obj.category_image.url)
-        return None
+        return _absolute_media_url(request, obj.category_image)
     
 class ProviderBasicSerializer(serializers.ModelSerializer):
     """Basic provider info to avoid circular imports and N+1"""
@@ -490,9 +495,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     
     def get_receiver_image(self, obj):
         request = self.context.get('request')
-        if obj.receiver.user.image and request:
-            return f"{settings.BASE_URL}{obj.receiver.user.image.url}"
-        return None
+        return _absolute_media_url(request, obj.receiver.user.image)
     
     @transaction.atomic  # Atomic transaction for review creation
     def create(self, validated_data):

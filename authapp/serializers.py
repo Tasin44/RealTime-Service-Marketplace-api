@@ -9,6 +9,7 @@ import string
 from .models import OTP
 from .utils import validate_and_get_otp
 from servicereceiverapp.models import ReceiverProfile
+from django.conf import settings
 
 User = get_user_model()
 
@@ -167,4 +168,9 @@ class MeSerializer(serializers.ModelSerializer):
         fields = ["id", "email", "name", "image", "role", "verified"]
 
     def get_image(self, obj):
-        return obj.image.url if obj.image else None
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return f"{settings.BASE_URL.rstrip('/')}{obj.image.url}"

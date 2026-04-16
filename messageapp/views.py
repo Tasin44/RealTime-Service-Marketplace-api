@@ -318,7 +318,7 @@ class MessageViewSet(StandardResponseMixin, viewsets.ModelViewSet):
                 "id": str(other.id),
                 "name": other.name,
                 "email": other.email,
-                "image": other.image.url if other.image else None
+                "image": request.build_absolute_uri(other.image.url) if other.image else None
             },
             "conversation_status": conversation.conversation_status,
             "results": messages

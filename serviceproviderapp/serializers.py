@@ -9,6 +9,14 @@ from django.conf import settings
 User = get_user_model()
 
 
+def _absolute_media_url(request, file_field):
+    if not file_field:
+        return None
+    if request:
+        return request.build_absolute_uri(file_field.url)
+    return f"{settings.BASE_URL.rstrip('/')}{file_field.url}"
+
+
 
 ALLOWED_COUNTRIES = [
     'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Australia', 'Austria',
@@ -35,9 +43,7 @@ ALLOWED_COUNTRIES = [
 class UserImageField(serializers.ImageField):
     def to_representation(self, value):
         request = self.context.get("request")
-        if value and request:
-            return f"{settings.BASE_URL}{value.url}"
-        return None
+        return _absolute_media_url(request, value)
 
 class UserSerializer(serializers.ModelSerializer):
   
@@ -63,10 +69,7 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
         
     def get_category_image(self, obj):
         request = self.context.get('request')
-        if obj.category_image and request:
-            return f"{settings.BASE_URL}{obj.category_image.url}"
-            # return request.build_absolute_uri(obj.category_image.url)
-        return None
+        return _absolute_media_url(request, obj.category_image)
 
 
 
@@ -107,7 +110,7 @@ class ProviderProfileListSerializer(serializers.ModelSerializer):
 
     # Nested category data without additional query (select_related in view)
     category_name = serializers.CharField(source='service_category.category_name', read_only=True)
-    category_image = serializers.ImageField(source='service_category.category_image', read_only=True)
+    category_image = serializers.SerializerMethodField()
     user_id = serializers.CharField(source='user.id', read_only=True)
     # Count of work images (annotated in view to avoid N+1)
     work_images_count = serializers.IntegerField(read_only=True)
@@ -121,6 +124,10 @@ class ProviderProfileListSerializer(serializers.ModelSerializer):
             'provider_service_charge', 'provider_country', 'provider_city',
             'provider_is_verified', 'work_images_count', 'created_at'
         ]
+
+    def get_category_image(self, obj):
+        request = self.context.get('request')
+        return _absolute_media_url(request, obj.service_category.category_image)
 
 class ProviderProfileDetailSerializer(serializers.ModelSerializer):
     """
@@ -255,10 +262,16 @@ class ProviderProfileCreateUpdateSerializer(serializers.ModelSerializer):
 
 class ProviderWorkImageUploadSerializer(serializers.ModelSerializer):
     """Serializer for uploading work images"""
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = ProviderWorkImage
         fields = ['id','provider_id', 'image', 'created_at']#'provider', 
         read_only_fields = ['id', 'created_at']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        return _absolute_media_url(request, obj.image)
 
 
 class TopRatedProviderSerializer(serializers.ModelSerializer):
