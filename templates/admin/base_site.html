@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}
+{{ title }} | Chiripa Administration
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/chiripa_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="chiripa-brand-wrap">
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">Chiripa Administration</a></h1>
+    <p class="chiripa-brand-subtitle">Service Operations Console</p>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -1,0 +1,372 @@
+:root {
+    --primary: #2c1810;
+    --primary-fg: #f4e6d8;
+    --secondary: #4a2520;
+    --accent: #c97b3a;
+    --primary-hairline: #5d4037;
+    --body-fg: #e8dcc8;
+    --body-bg: #1a0f0a;
+    --header-color: #f5ebe0;
+    --header-branding-color: #f5ebe0;
+    --header-bg: linear-gradient(120deg, #2c1810 0%, #4a2520 52%, #6b3a2e 100%);
+    --header-link-color: #f5ebe0;
+    --breadcrumbs-fg: #d4c4b0;
+    --breadcrumbs-link-fg: #c97b3a;
+    --breadcrumbs-bg: #3a2520;
+    --link-fg: #c97b3a;
+    --link-hover-color: #e69b5c;
+    --link-selected-fg: #a86b3a;
+    --hairline-color: #5d4037;
+    --border-color: #6b4a3a;
+    --error-fg: #c95a3a;
+    --message-success-bg: #2d4a3a;
+    --message-warning-bg: #4a3a2d;
+    --message-error-bg: #4a2d2d;
+    --darkened-bg: #2a1a15;
+    --selected-bg: #3a2520;
+    --selected-row: #4a3025;
+    --close-button-bg: #6b4a3a;
+    --close-button-hover-bg: #8b5a4a;
+}
+
+html[data-theme="dark"] {
+    --body-bg: #1a0f0a;
+    --body-fg: #e8dcc8;
+    --primary: #c97b3a;
+    --link-fg: #e69b5c;
+    --hairline-color: #5d4037;
+    --border-color: #6b4a3a;
+    --darkened-bg: #2a1a15;
+    --selected-bg: #3a2520;
+    --selected-row: #4a3025;
+    --breadcrumbs-bg: #3a2520;
+    --breadcrumbs-fg: #d4c4b0;
+    --header-bg: linear-gradient(120deg, #2c1810 0%, #4a2520 55%, #6b3a2e 100%);
+}
+
+body {
+    background: 
+        radial-gradient(circle at 10% 12%, rgba(201, 123, 58, 0.08), transparent 28%),
+        radial-gradient(circle at 82% 18%, rgba(74, 37, 32, 0.08), transparent 26%),
+        var(--body-bg);
+    color: var(--body-fg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#header {
+    background: var(--header-bg);
+    box-shadow: 0 4px 20px rgba(44, 24, 16, 0.4);
+    border-bottom: 2px solid var(--border-color);
+    min-height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+#site-name a {
+    color: var(--header-branding-color);
+    letter-spacing: 0.03em;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 1.4rem;
+}
+
+.chiripa-brand-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chiripa-brand-subtitle {
+    margin: 0;
+    color: rgba(245, 235, 224, 0.82);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#user-tools {
+    font-weight: 500;
+    color: var(--header-link-color);
+}
+
+#user-tools a {
+    color: var(--header-link-color);
+    border-bottom: 1px solid rgba(245, 235, 224, 0.4);
+    transition: all 0.3s ease;
+}
+
+#user-tools a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+div.breadcrumbs {
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    padding: 12px 24px;
+    background: var(--breadcrumbs-bg);
+    color: var(--breadcrumbs-fg);
+}
+
+#content {
+    padding: 24px;
+    background: var(--body-bg);
+}
+
+#content-main,
+.module,
+.inline-group {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--darkened-bg);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 8px 24px rgba(44, 24, 16, 0.3);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+    background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+    color: var(--header-color);
+    border-radius: 11px 11px 0 0;
+    font-size: 0.88rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+    font-weight: 600;
+}
+
+#changelist-filter h2 {
+    border-radius: 11px 11px 0 0;
+}
+
+.dashboard #content {
+    width: min(1280px, 96vw);
+    margin: 0 auto;
+}
+
+.dashboard .module table th,
+.dashboard .module table td {
+    padding: 11px 10px;
+    border-bottom: 1px solid var(--hairline-color);
+}
+
+a.section:link,
+a.section:visited {
+    color: var(--link-fg);
+    font-weight: 700;
+    transition: color 0.3s ease;
+}
+
+a.section:hover {
+    color: var(--link-hover-color);
+}
+
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+a.button {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    color: var(--primary-fg);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(44, 24, 16, 0.3);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.button:hover,
+input[type=submit]:hover,
+input[type=button]:hover,
+.submit-row input:hover,
+a.button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(44, 24, 16, 0.4);
+    border-color: var(--accent);
+}
+
+.button.default,
+input[type=submit].default,
+.submit-row input.default {
+    background: linear-gradient(90deg, var(--secondary), #8b5a4a);
+}
+
+.selector-chosen h2 {
+    background: linear-gradient(90deg, var(--secondary), #8b5a4a);
+}
+
+#changelist-filter {
+    border-left: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--darkened-bg);
+    border: 1px solid var(--border-color);
+}
+
+#changelist-filter li.selected {
+    border-left: 4px solid var(--accent);
+    background: var(--selected-bg);
+}
+
+.paginator,
+#changelist .paginator {
+    border-radius: 8px;
+    background: var(--darkened-bg);
+    border: 1px solid var(--border-color);
+    margin: 12px;
+    padding: 10px 12px;
+}
+
+.login #container {
+    width: min(440px, 92vw);
+    margin-top: 7vh;
+}
+
+.login #header {
+    border-radius: 16px 16px 0 0;
+}
+
+.login #content {
+    padding: 0;
+}
+
+.login #content-main {
+    border-radius: 0 0 16px 16px;
+    border-top: 0;
+}
+
+.login .form-row {
+    padding: 12px 22px;
+}
+
+/* Form inputs and fields */
+input,
+textarea,
+select,
+.vTextField,
+.vLargeTextField,
+.vURLField,
+.vIntegerField,
+.vDateField,
+.vTimeField,
+.vDateTimeField,
+.selector,
+.filtered select {
+    color: var(--body-fg);
+    background: var(--selected-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    transition: all 0.3s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(201, 123, 58, 0.2);
+    background: var(--selected-row);
+}
+
+/* Tables within admin */
+.module table th,
+.module table td,
+#changelist table td,
+#changelist table th {
+    border-bottom: 1px solid var(--hairline-color);
+    padding: 10px;
+}
+
+.module table thead th,
+#changelist table thead th {
+    background: var(--secondary);
+    color: var(--header-color);
+    font-weight: 600;
+}
+
+tr.selected td {
+    background: var(--selected-row);
+}
+
+/* Messages and notifications */
+.messagelist li.success {
+    background: var(--message-success-bg);
+    color: var(--body-fg);
+    border-left-color: #7bc47f;
+}
+
+.messagelist li.warning {
+    background: var(--message-warning-bg);
+    color: var(--body-fg);
+    border-left-color: var(--accent);
+}
+
+.messagelist li.error {
+    background: var(--message-error-bg);
+    color: var(--body-fg);
+    border-left-color: var(--error-fg);
+}
+
+/* Help text */
+.help,
+.helptext {
+    color: var(--breadcrumbs-fg);
+    font-size: 0.85em;
+}
+
+/* Calendar and time widgets */
+.calendar,
+.timezonewarning {
+    background: var(--darkened-bg);
+    border-color: var(--border-color);
+}
+
+.calendar caption,
+.calendarbox caption {
+    background: var(--primary);
+    color: var(--header-color);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--body-bg);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+@media (max-width: 900px) {
+    #header {
+        min-height: 82px;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    #content {
+        padding: 16px;
+    }
+
+    div.breadcrumbs {
+        padding: 10px 16px;
+    }
+}

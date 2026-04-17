@@ -476,9 +476,17 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate_conversation(self, value):
+        sender = self.context.get('sender')
+
+        # Receiver must wait for provider acceptance while conversation is pending.
+        if value.conversation_status == 'pending' and sender == value.receiver.user:
+            raise serializers.ValidationError(
+                "Please Wait untill the provider accept your msg request"
+            )
+
         # Check if conversation is active
         if value.conversation_status != 'active':
-            raise serializers.ValidationError("Cannot send messages to inactive conversation")
+            raise serializers.ValidationError("Please Wait untill the provider accept your msg request")
         return value
     
     def validate(self, data):

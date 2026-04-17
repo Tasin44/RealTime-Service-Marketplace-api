@@ -89,15 +89,20 @@ class SignupSerializer(serializers.Serializer):
     def send_otp_email(email, otp_code):
         try:
             resend.Emails.send({
-                "from": "onboarding@resend.dev",  # must be verified domain in Resend
+                "from": "noreply@mychiripa.com",  # must be verified domain in Resend
                 "to": [email],
                 "subject": "Your OTP Code for Verification in Chiripa",
                 "html": f"""
-                    <div style="font-family: Arial; padding: 20px;">
+                    <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
                         <h2>OTP Verification</h2>
-                        <p>Your OTP code is:</p>
+                        <p>Dear User,</p>
+                        <p>Thank you for registering with Chiripa.</p>
+                        <p>Your One-Time Password (OTP) for verification is:</p>
                         <h1 style="letter-spacing: 5px;">{otp_code}</h1>
-                        <p>This code is valid for 10 minutes.</p>
+                        <p>This OTP is valid for 10 minutes. Please do not share it with anyone.</p>
+                        <p>If you did not request this, please ignore this email.</p>
+                        <br>
+                        <p>Best regards,<br>Chiripa Team</p>
                     </div>
                 """
             })

@@ -156,6 +156,15 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         Supports: country, category, rating, verification status, search
         """
         queryset = self.get_queryset().filter(user__role='provider')
+        '''
+        ❌Previous issue: When a user becomes provider, he also see him on the provider list, to get rid of this, I just include user_role='provider'
+
+        Why this fixes your bug:
+        When a user was previously verified as provider but later switches role back to receiver, their provider profile record may still exist.
+        Before this fix, list queries returned that profile anyway.
+        Now, list queries return only profiles where the linked user currently has role = provider, so receiver-mode users will not appear in provider listings.
+        
+        '''
         
         # Filter by country (case-insensitive exact match)
         country = request.query_params.get('country', None)

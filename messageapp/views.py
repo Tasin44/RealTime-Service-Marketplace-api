@@ -30,23 +30,48 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 # Mixin for consistent responses
 class StandardResponseMixin:
+    """Mixin for consistent API responses"""
     def success_response(self, data, message="Success", status_code=200):
         return Response({
             "success": True,
             "statusCode": status_code,
             "message": message,
             "data": data,
-            # "timestamp": timezone.now().isoformat()
+            "timestamp": timezone.now().isoformat()
         }, status=status_code)
-
+    
     def error_response(self, message, status_code=400, data=None):
         return Response({
             "success": False,
             "statusCode": status_code,
             "message": message,
             "data": data,
-            # "timestamp": timezone.now().isoformat()
+            "timestamp": timezone.now().isoformat()
         }, status=status_code)
+
+    def extract_first_error(self, errors):
+        if isinstance(errors, dict):
+            for value in errors.values():
+                extracted = self.extract_first_error(value)
+                if extracted:
+                    return extracted
+        elif isinstance(errors, list) and errors:
+            extracted = self.extract_first_error(errors[0])
+            if extracted:
+                return extracted
+        elif errors:
+            return str(errors)
+        return None
+
+def extract_first_error(errors):
+    """Extract the first error message from serializer errors dict"""
+    for field, messages in errors.items():
+        if isinstance(messages, list) and messages:
+            return messages[0]
+             #return f"{field}: {messages[0]}"
+        elif isinstance(messages, str):
+            return messages
+    return "Validation Error"
 
 
 class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
@@ -388,8 +413,13 @@ class MessageViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             )
             return self.success_response(detail_serializer.data, message="Message sent", status_code=201)
         
+        first_error = self.extract_first_error(serializer.errors)
+        error_message = "Validation failed"
+        if first_error:
+            error_message = f"Validation failed: {first_error}"
+
         return self.error_response(
-            "Validation failed",
+            error_message,
             status_code=400,
             data=serializer.errors
         )
