@@ -442,8 +442,8 @@ def stripe_connect_onboard(request):
         return Response({"error": f"{country} not supported by Stripe"}, status=400)
 
     # Reuse existing account if any
-    if provider.stripe_account_id:
-        account_id = provider.stripe_account_id
+    if provider.provider_stripe_account_id:
+        account_id = provider.provider_stripe_account_id
     else:
         account = stripe.Account.create(
             type='express',
@@ -454,8 +454,8 @@ def stripe_connect_onboard(request):
                 'transfers': {'requested': True},
             },
         )
-        provider.stripe_account_id = account.id
-        provider.save(update_fields=['stripe_account_id'])
+        provider.provider_stripe_account_id = account.id
+        provider.save(update_fields=['provider_stripe_account_id'])
         account_id = account.id
 
     account_link = stripe.AccountLink.create(
@@ -481,7 +481,7 @@ def stripe_onboard_complete(request):
         return redirect(f"{settings.BASE_URL}/provider/dashboard?stripe=error")
 
     try:
-        provider = ProviderProfile.objects.get(stripe_account_id=account_id)
+        provider = ProviderProfile.objects.get(provider_stripe_account_id=account_id)
         account = stripe.Account.retrieve(account_id)
 
         if account.charges_enabled and account.payouts_enabled:

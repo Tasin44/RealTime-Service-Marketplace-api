@@ -552,6 +552,7 @@ class ProviderEarningsSerializer(serializers.Serializer):
     active_hires = serializers.IntegerField()
     cancelled_works = serializers.IntegerField()
     total_hired = serializers.IntegerField()
+    rating = serializers.DecimalField(max_digits=3, decimal_places=2)
 
 
 class HiringListSerializer(serializers.Serializer):

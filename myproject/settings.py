@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'quoteapp',
     'channels',  # ✅ For messageapp
     'messageapp',
+
 ]
 # ✅ For messageapp
 ASGI_APPLICATION = 'myproject.asgi.application'

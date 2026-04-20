@@ -1434,7 +1434,8 @@ class ProviderDashboardViewSet(StandardResponseMixin,viewsets.ViewSet):
             'last_month_earnings': stats['last_month_earnings'] or Decimal('0.00'),
             'active_hires': stats['active_hires'],
             'cancelled_works': stats['cancelled_works'],
-            'total_hired': provider.provider_total_hired
+            'total_hired': provider.provider_total_hired,
+            'rating':provider.provider_rating,
         }
         
         serializer = ProviderEarningsSerializer(data=data)

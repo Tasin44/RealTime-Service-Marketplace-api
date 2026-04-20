@@ -121,7 +121,7 @@ class ProviderProfileListSerializer(serializers.ModelSerializer):
             'id','user_id','user_name', 'user_email','user_image', 'category_name', 
             'category_image', 'service_title', 'provider_description',
             'provider_experience', 'provider_done_work', 'provider_rating',
-            'provider_service_charge', 'provider_country', 'provider_city',
+            'provider_service_charge', 'provider_country', 'provider_city','provider_stripe_account_id','stripe_connected',
             'provider_is_verified', 'work_images_count', 'created_at'
         ]
 
@@ -158,7 +158,7 @@ class ProviderProfileDetailSerializer(serializers.ModelSerializer):
             'provider_licence_number', 'provider_country',
             'provider_city', 'provider_service_area', 'provider_total_hired',
             'provider_total_earnings', 'provider_available_balance',
-            'provider_is_verified', 'keywords', 'work_images', 'documents',
+            'provider_is_verified', 'keywords', 'work_images', 'documents','provider_stripe_account_id','stripe_connected',
             'created_at', 'updated_at'
         ]
 
@@ -183,7 +183,7 @@ class ProviderProfileCreateUpdateSerializer(serializers.ModelSerializer):
             'id','user','user_image', 'service_category', 'service_title',
             'provider_description', 'provider_experience', 'provider_service_charge',
             'provider_language', 'provider_licence_number',
-            'provider_country', 'provider_city', 'provider_service_area',
+            'provider_country', 'provider_city', 'provider_service_area','provider_stripe_account_id','stripe_connected',
             'keywords',          # input
             'keywords_display'   # output
         ]
@@ -288,7 +288,7 @@ class TopRatedProviderSerializer(serializers.ModelSerializer):
         model = ProviderProfile
         fields = [
             'id','user_name','user_image', 'category_name', 'service_title',
-            'provider_country', 'provider_city', 'average_rating', 
+            'provider_country', 'provider_city', 'average_rating','provider_stripe_account_id','stripe_connected',
             'total_work', 'provider_is_verified'
         ]    
 
