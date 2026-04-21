@@ -121,7 +121,7 @@ class ProviderProfileListSerializer(serializers.ModelSerializer):
             'id','user_id','user_name', 'user_email','user_image', 'category_name', 
             'category_image', 'service_title', 'provider_description',
             'provider_experience', 'provider_done_work', 'provider_rating',
-            'provider_service_charge', 'provider_country', 'provider_city','provider_stripe_account_id','stripe_connected',
+            'provider_service_charge', 'provider_country', 'provider_city','provider_profile_setup_done','provider_stripe_account_id','stripe_connected',
             'provider_is_verified', 'work_images_count', 'created_at'
         ]
 
@@ -156,7 +156,7 @@ class ProviderProfileDetailSerializer(serializers.ModelSerializer):
             'provider_description', 'provider_experience', 'provider_done_work',
             'provider_rating', 'provider_service_charge', 'provider_language',
             'provider_licence_number', 'provider_country',
-            'provider_city', 'provider_service_area', 'provider_total_hired',
+            'provider_city', 'provider_service_area', 'provider_total_hired','provider_profile_setup_done',
             'provider_total_earnings', 'provider_available_balance',
             'provider_is_verified', 'keywords', 'work_images', 'documents','provider_stripe_account_id','stripe_connected',
             'created_at', 'updated_at'
@@ -175,6 +175,12 @@ class ProviderProfileCreateUpdateSerializer(serializers.ModelSerializer):
     
     # Country validation
     provider_country = serializers.CharField(max_length=100)
+
+    #===========\
+    provider_state = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    provider_zip_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    #=============/
+
     user_image = UserImageField(source="user.image", read_only=True)
 
     class Meta:
@@ -183,7 +189,7 @@ class ProviderProfileCreateUpdateSerializer(serializers.ModelSerializer):
             'id','user','user_image', 'service_category', 'service_title',
             'provider_description', 'provider_experience', 'provider_service_charge',
             'provider_language', 'provider_licence_number',
-            'provider_country', 'provider_city', 'provider_service_area','provider_stripe_account_id','stripe_connected',
+            'provider_country', 'provider_city', 'provider_state', 'provider_zip_code','provider_service_area','provider_profile_setup_done','provider_stripe_account_id','stripe_connected',
             'keywords',          # input
             'keywords_display'   # output
         ]
@@ -309,7 +315,11 @@ from .models import BankDetails
 class BankDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankDetails
-        fields = ['id', 'bank_account_name', 'bank_account_number', 'bank_details', 'created_at']
+        fields = [
+            'id', 'bank_account_name', 'bank_account_number',
+            'bank_name', 'routing_number', 'bank_details',
+            'created_at', 'updated_at'
+        ]
         read_only_fields = ['id', 'created_at']
 
 

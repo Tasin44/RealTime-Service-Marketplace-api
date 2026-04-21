@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
     SignupView, VerifyOTPView, ResendOTPView, LoginView,
-    LogoutView, ForgotPasswordView, ResetPasswordView,ProfileUpdateView,DeleteUserView,MeView
+    LogoutView, ForgotPasswordView, ResetPasswordView,ProfileUpdateView,DeleteUserView,MeView,
+    ProviderProfileStatusView, SwitchUserModeView
 )
 
 urlpatterns = [
@@ -15,5 +16,7 @@ urlpatterns = [
     path('profile/', ProfileUpdateView.as_view(), name='profile'),
     path("delete-account/", DeleteUserView.as_view(), name="delete-account"),
     path("me/", MeView.as_view(), name="me"),
+    path("provider-profile-status/", ProviderProfileStatusView.as_view(), name="provider-profile-status"),
+    path("switch-mode/", SwitchUserModeView.as_view(), name="switch-mode"),
 
 ]

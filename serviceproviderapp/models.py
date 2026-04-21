@@ -30,6 +30,12 @@ class ProviderProfile(models.Model):
     provider_country = models.CharField(max_length=100, null=True, blank=True)#entered by provider manually
     provider_city = models.CharField(max_length=100, null=True, blank=True)#entered by provider manually
     provider_service_area = models.TextField(null=True, blank=True)#entered by provider manually
+    #new
+    provider_state = models.CharField(max_length=100, null=True, blank=True)
+    provider_zip_code = models.CharField(max_length=20, null=True, blank=True)
+
+    provider_profile_setup_done=models.BooleanField(default=False)
+
 
     provider_total_hired = models.IntegerField(default=0)#From this app
     provider_total_earnings = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)#From this app
@@ -95,6 +101,12 @@ class BankDetails(models.Model):
     provider = models.OneToOneField(ProviderProfile, on_delete=models.CASCADE, related_name='bank_details')
     bank_account_name = models.CharField(max_length=255)
     bank_account_number = models.CharField(max_length=50)
+
+    #=========new
+    bank_name = models.TextField(null=True, blank=True)
+    routing_number = models.TextField(null=True, blank=True)
+    #===========
+
     bank_details = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

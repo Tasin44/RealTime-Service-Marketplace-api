@@ -97,8 +97,16 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
     
     # Search across multiple fields
     search_fields = [
-        'service_title', 'user__username',
-        'user__email', 'provider_city', 'provider_country','provider_service_area','providerkeyword__keyword'
+        'service_title',
+        'user__name',
+        'user__email',
+        'provider_city',
+        'provider_state',
+        'provider_zip_code',
+        'provider_country',
+        'provider_service_area',
+        'providerkeyword__keyword',
+        'service_category__category_name'
     ]
     
     # Allow ordering by these fields
@@ -165,19 +173,41 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         Now, list queries return only profiles where the linked user currently has role = provider, so receiver-mode users will not appear in provider listings.
         
         '''
-        
-        # Filter by country (case-insensitive exact match)
-        country = request.query_params.get('country', None)
-        if country:
-            queryset = queryset.filter(provider_country__iexact=country)#❓❓❓ what is iexact here
+        name = request.query_params.get('name')
+        country = request.query_params.get('country') # Filter by country (case-insensitive exact match)
+        state = request.query_params.get('state')
+        zip_code = request.query_params.get('zip_code')
+        category = request.query_params.get('category')
+        category_name = request.query_params.get('category_name')
+        min_rating = request.query_params.get('min_rating')# Filter by minimum rating
+        is_verified = request.query_params.get('is_verified', None)
         
         # Filter by category ID
         category_id = request.query_params.get('category', None)
+       
+        if name:
+            queryset = queryset.filter(user__name__icontains=name)
+
+        if country:
+            queryset = queryset.filter(provider_country__iexact=country)#❓❓❓ what is iexact here
+
+        if state:
+            queryset = queryset.filter(provider_state__iexact=state)
+
+        if zip_code:
+            queryset = queryset.filter(provider_zip_code__iexact=zip_code)
+
+        if category:
+            queryset = queryset.filter(service_category_id=category)
+
+        if category_name:
+            queryset = queryset.filter(service_category__category_name__icontains=category_name)
+
+
         if category_id:
             queryset = queryset.filter(service_category_id=category_id)
         
-        # Filter by minimum rating
-        min_rating = request.query_params.get('min_rating', None)
+        
         if min_rating:
             try:
                 queryset = queryset.filter(provider_rating__gte=float(min_rating))
@@ -185,7 +215,7 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                 pass
         
         # Filter by verification status
-        is_verified = request.query_params.get('is_verified', None)
+
         if is_verified is not None:
             is_verified_bool = is_verified.lower() == 'true'
             queryset = queryset.filter(provider_is_verified=is_verified_bool)
@@ -199,7 +229,8 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         
-        serializer = self.get_serializer(queryset, many=True)
+        #serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
     
     @swagger_auto_schema(

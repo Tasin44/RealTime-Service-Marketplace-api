@@ -84,19 +84,20 @@ class QuotationViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         )
         
         # Filter based on user role
-        try:
-            # If user is a provider, show quotations they created
-            provider = ProviderProfile.objects.get(user=user)
-            return queryset.filter(provider=provider)
-        except ProviderProfile.DoesNotExist:
-            pass
-        
-        try:
-            # If user is a receiver, show quotations sent to them
-            receiver = ReceiverProfile.objects.get(user=user)
-            return queryset.filter(receiver=receiver)
-        except ReceiverProfile.DoesNotExist:
-            pass
+        if user.role == 'provider':
+            try:
+                # If user is a provider, show quotations they created
+                provider = ProviderProfile.objects.get(user=user)
+                return queryset.filter(provider=provider)
+            except ProviderProfile.DoesNotExist:
+                pass
+        if user.role == 'receiver':
+            try:
+                # If user is a receiver, show quotations sent to them
+                receiver = ReceiverProfile.objects.get(user=user)
+                return queryset.filter(receiver=receiver)
+            except ReceiverProfile.DoesNotExist:
+                pass
         
         # If user has no role, return empty queryset
         return queryset.none()
@@ -598,17 +599,19 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         )
         
         # Filter based on user role
-        try:
-            provider = ProviderProfile.objects.get(user=user)
-            return queryset.filter(provider=provider)
-        except ProviderProfile.DoesNotExist:
-            pass
-        
-        try:
-            receiver = ReceiverProfile.objects.get(user=user)
-            return queryset.filter(receiver=receiver)
-        except ReceiverProfile.DoesNotExist:
-            pass
+        if user.role == 'provider':
+            try:
+                provider = ProviderProfile.objects.get(user=user)
+                return queryset.filter(provider=provider)
+            except ProviderProfile.DoesNotExist:
+                return queryset.none()
+
+        if user.role == 'receiver':
+            try:
+                receiver = ReceiverProfile.objects.get(user=user)
+                return queryset.filter(receiver=receiver)
+            except ReceiverProfile.DoesNotExist:
+                return queryset.none()
         
         return queryset.none()
     
@@ -1272,19 +1275,21 @@ class ReviewViewSet(StandardResponseMixin,viewsets.ModelViewSet):
     )
     
     # Filter based on user role
-    try:
-        provider = ProviderProfile.objects.get(user=user)
-        # Provider sees reviews about them
-        return queryset.filter(provider=provider).order_by('-created_at')
-    except ProviderProfile.DoesNotExist:
-        pass
-    
-    try:
-        receiver = ReceiverProfile.objects.get(user=user)
-        # Receiver sees their own reviews
-        return queryset.filter(receiver=receiver).order_by('-created_at')
-    except ReceiverProfile.DoesNotExist:
-        pass
+    if user.role == 'provider':
+        try:
+            provider = ProviderProfile.objects.get(user=user)
+            # Provider sees reviews about them
+            return queryset.filter(provider=provider).order_by('-created_at')
+        except ProviderProfile.DoesNotExist:
+            pass
+
+    if user.role == 'receiver':
+        try:
+            receiver = ReceiverProfile.objects.get(user=user)
+            # Receiver sees their own reviews
+            return queryset.filter(receiver=receiver).order_by('-created_at')
+        except ReceiverProfile.DoesNotExist:
+            pass
     
     return queryset.none()
 

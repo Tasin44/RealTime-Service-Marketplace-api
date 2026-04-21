@@ -146,7 +146,7 @@ class LoginView(StandardResponseMixin, APIView):
                     "user": {
                         "id": str(user.id),
                         "email": user.email,
-                         "name": user.name
+                        "name": user.name
                     }
                 },
                 message="Login successful.",
@@ -281,3 +281,73 @@ class MeView(APIView):
     def get(self, request):
         serializer = MeSerializer(request.user)
         return Response(serializer.data, status=200)
+
+
+
+from servicereceiverapp.models import ReceiverProfile
+from serviceproviderapp.models import ProviderProfile
+
+class ProviderProfileStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile_done=False
+        if ProviderProfile.provider_profile_setup_done:
+            # profile_done = ProviderProfile.objects.filter(user=request.user).exists()
+            profile_done = True
+        return Response({
+            "provider_profile_setup_done": profile_done,
+            "current_mode": request.user.role
+        }, status=200)
+
+class SwitchUserModeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        target_mode = (request.data.get("mode") or "").strip().lower()
+        if target_mode not in ["provider", "receiver"]:
+            return Response({"error": "mode must be provider or receiver"}, status=400)
+
+        if request.user.role == target_mode:
+            profile_done = ProviderProfile.objects.filter(user=request.user).exists()
+            return Response({
+                "message": "Mode unchanged",
+                "role": request.user.role,
+                "provider_profile_setup_done": profile_done
+            }, status=200)
+
+        if target_mode == "provider":
+            profile_done = ProviderProfile.objects.filter(user=request.user).exists()
+            if not profile_done:
+                return Response(
+                    {
+                        "error": "Provider profile is not set up yet",
+                        "provider_profile_setup_done": False
+                    },
+                    status=400
+                )
+
+        if target_mode == "receiver":
+            ReceiverProfile.objects.get_or_create(user=request.user)
+
+        request.user.role = target_mode
+        request.user.save(update_fields=["role", "updated_at"])
+
+        profile_done = ProviderProfile.objects.filter(user=request.user).exists()
+        return Response({
+            "message": "Mode switched successfully",
+            "role": request.user.role,
+            "provider_profile_setup_done": profile_done
+        }, status=200)
+
+
+
+
+
+
+
+
+
+
+
+

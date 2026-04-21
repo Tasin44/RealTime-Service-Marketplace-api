@@ -11,6 +11,8 @@ from .models import OTP
 from .utils import validate_and_get_otp
 from servicereceiverapp.models import ReceiverProfile
 from django.conf import settings
+from serviceproviderapp.models import ProviderProfile
+
 
 resend.api_key = settings.RESEND_API_KEY
 
@@ -190,10 +192,11 @@ class ConfirmDeleteUserSerializer(serializers.Serializer):
 
 class MeSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    provider_profile_setup_done = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "name", "image", "role", "verified"]
+        fields = ["id", "email", "name", "image", "role", "verified","provider_profile_setup_done"]
 
     def get_image(self, obj):
         if not obj.image:
@@ -202,3 +205,6 @@ class MeSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.image.url)
         return f"{settings.BASE_URL.rstrip('/')}{obj.image.url}"
+    
+    def get_provider_profile_setup_done(self, obj):
+        return ProviderProfile.objects.filter(user=obj).exists()

@@ -98,20 +98,22 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             )
         
         # Filter based on user role - show conversations user is part of
-        try:
-            # If user is a provider
-            provider = ProviderProfile.objects.get(user=user)
-            return queryset.filter(provider=provider)
-        except ProviderProfile.DoesNotExist:
-            pass
+        if user.role == 'provider':
+            try:
+                # If user is a provider
+                provider = ProviderProfile.objects.get(user=user)
+                return queryset.filter(provider=provider)
+            except ProviderProfile.DoesNotExist:
+                return queryset.none()
         
-        try:
-            # If user is a receiver
-            receiver = ReceiverProfile.objects.get(user=user)
-            return queryset.filter(receiver=receiver)
-        except ReceiverProfile.DoesNotExist:
-            pass
-        
+        if user.role == 'receiver':
+            try:
+                # If user is a receiver
+                receiver = ReceiverProfile.objects.get(user=user)
+                return queryset.filter(receiver=receiver)
+            except ReceiverProfile.DoesNotExist:
+                return queryset.none()
+            
         # If user has no profile, return empty
         return queryset.none()
     
