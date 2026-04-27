@@ -309,7 +309,36 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
 # Serializer for creating a new conversation (receiver initiates)
 class ConversationCreateSerializer(serializers.Serializer):
     provider_id = serializers.CharField()  # User UUID
-    initial_message = serializers.CharField(max_length=1000, default="Hi I want to take service")
+    initial_message = serializers.CharField(max_length=1000, default="Greetings, I would like to request your services")
+
+    def validate_provider_id(self, value):
+        try:
+            user = User.objects.get(id=value)
+            provider = user.providerprofile
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Provider user not found")
+        except ProviderProfile.DoesNotExist:
+            raise serializers.ValidationError("User is not a provider")
+        except ValueError:
+            raise serializers.ValidationError("Invalid user ID format")
+
+        receiver = self.context.get('receiver')
+        if receiver:
+            existing_conv = Conversation.objects.filter(
+                receiver=receiver,
+                provider=provider
+            ).first()
+
+            if (
+                existing_conv and
+                existing_conv.conversation_status == 'pending' and
+                timezone.now() <= existing_conv.expires_at
+            ):
+                raise serializers.ValidationError(
+                    "Wait until the provider accepts your booking request."
+                )
+
+        return value
     
     '''
     def validate_provider_id(self, value):
@@ -349,11 +378,25 @@ class ConversationCreateSerializer(serializers.Serializer):
         ).first()
         
         if existing_conv:
+            # If pending request window has passed, mark it expired first.
+            if (
+                existing_conv.conversation_status == 'pending' and
+                timezone.now() > existing_conv.expires_at
+            ):
+                existing_conv.conversation_status = 'expired'
+                existing_conv.save(update_fields=['conversation_status', 'updated_at'])
+
+            # Still pending and not expired -> receiver must wait.
+            if existing_conv.conversation_status == 'pending':
+                raise serializers.ValidationError(
+                    "Wait until the provider accepts your booking request."
+                )
+
             # If expired, create new message to reactivate
             if existing_conv.conversation_status == 'expired':
                 existing_conv.conversation_status = 'pending'
                 existing_conv.expires_at = timezone.now() + timedelta(hours=24)
-                existing_conv.save()
+                existing_conv.save(update_fields=['conversation_status', 'expires_at', 'updated_at'])
             
             # Add initial message
             Message.objects.create(

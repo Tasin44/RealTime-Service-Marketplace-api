@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 # Create your views here.
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -206,7 +206,15 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
         )
         
         if serializer.is_valid():
-            conversation = serializer.save()
+            try:
+                conversation = serializer.save()
+            except drf_serializers.ValidationError as exc:
+                first_error = self.extract_first_error(exc.detail)
+                return self.error_response(
+                    first_error or "Validation failed",
+                    status_code=400,
+                    data=exc.detail
+                )
             
             detail_serializer = ConversationDetailSerializer(
                 conversation,
@@ -218,10 +226,57 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
                 status_code=201
             )
         
+        first_error = self.extract_first_error(serializer.errors)
         return self.error_response(
-            "Validation failed",
+            first_error or "Validation failed",
             status_code=400,
             data=serializer.errors
+        )
+
+    @swagger_auto_schema(
+        operation_description="Get current conversation status",
+        responses={200: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                'statusCode': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'data': openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'conversation_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'conversation_status': openapi.Schema(type=openapi.TYPE_STRING),
+                        'is_accepted': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'expires_at': openapi.Schema(type=openapi.TYPE_STRING),
+                    }
+                ),
+                'timestamp': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        )}
+    )
+    @action(detail=True, methods=['get'], url_path='status')
+    def conversation_status(self, request, pk=None):
+        conversation = self.get_object()
+
+        # Keep status fresh for expired pending requests.
+        if (
+            conversation.conversation_status == 'pending' and
+            conversation.expires_at <= timezone.now()
+        ):
+            conversation.conversation_status = 'expired'
+            conversation.save(update_fields=['conversation_status', 'updated_at'])
+
+        data = {
+            "conversation_id": conversation.conversation_id,
+            "conversation_status": conversation.conversation_status,
+            "is_accepted": conversation.conversation_status == 'active',
+            "expires_at": conversation.expires_at,
+        }
+
+        return self.success_response(
+            data,
+            message="Conversation status fetched successfully",
+            status_code=200
         )
     
     @swagger_auto_schema(
