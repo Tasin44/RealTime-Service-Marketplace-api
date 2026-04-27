@@ -392,6 +392,10 @@ class ConversationCreateSerializer(serializers.Serializer):
                     "Wait until the provider accepts your booking request."
                 )
 
+            # If already active, do not create another default message.
+            if existing_conv.conversation_status == 'active':
+                return existing_conv
+
             # If expired, create new message to reactivate
             if existing_conv.conversation_status == 'expired':
                 existing_conv.conversation_status = 'pending'
