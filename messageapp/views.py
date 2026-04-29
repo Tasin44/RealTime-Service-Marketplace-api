@@ -41,6 +41,9 @@ class StandardResponseMixin:
         }, status=status_code)
     
     def error_response(self, message, status_code=400, data=None):
+        detail = self.extract_first_error(data)
+        if detail and detail not in message:
+            message = f"{message}: {detail}"
         return Response({
             "success": False,
             "statusCode": status_code,
@@ -51,10 +54,23 @@ class StandardResponseMixin:
 
     def extract_first_error(self, errors):
         if isinstance(errors, dict):
-            for value in errors.values():
-                extracted = self.extract_first_error(value)
+            if "non_field_errors" in errors:
+                extracted = self.extract_first_error(errors.get("non_field_errors"))
                 if extracted:
                     return extracted
+            for field, value in errors.items():
+                if isinstance(value, list) and value:
+                    nested = value[0]
+                    if isinstance(nested, (dict, list)):
+                        extracted = self.extract_first_error(nested)
+                        if extracted:
+                            return f"{field} :: {extracted}"
+                    return f"{field} :: {nested}"
+                if isinstance(value, str):
+                    return f"{field} :: {value}"
+                extracted = self.extract_first_error(value)
+                if extracted:
+                    return f"{field} :: {extracted}"
         elif isinstance(errors, list) and errors:
             extracted = self.extract_first_error(errors[0])
             if extracted:
@@ -99,20 +115,12 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
         
         # Filter based on user role - show conversations user is part of
         if user.role == 'provider':
-            try:
-                # If user is a provider
-                provider = ProviderProfile.objects.get(user=user)
-                return queryset.filter(provider=provider)
-            except ProviderProfile.DoesNotExist:
-                return queryset.none()
+            # If user is a provider
+            return queryset.filter(provider__user=user)
         
         if user.role == 'receiver':
-            try:
-                # If user is a receiver
-                receiver = ReceiverProfile.objects.get(user=user)
-                return queryset.filter(receiver=receiver)
-            except ReceiverProfile.DoesNotExist:
-                return queryset.none()
+            # If user is a receiver
+            return queryset.filter(receiver__user=user)
             
         # If user has no profile, return empty
         return queryset.none()

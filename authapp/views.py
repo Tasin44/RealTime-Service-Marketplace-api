@@ -29,7 +29,26 @@ class StandardResponseMixin:
             # "timestamp": timezone.now().isoformat()
         }, status=status_code)
     
+    def _extract_error_detail(self, data):
+        if not data:
+            return None
+        if isinstance(data, str):
+            return data
+        if isinstance(data, list) and data:
+            return self._extract_error_detail(data[0])
+        if isinstance(data, dict):
+            if "non_field_errors" in data:
+                return self._extract_error_detail(data["non_field_errors"])
+            for value in data.values():
+                detail = self._extract_error_detail(value)
+                if detail:
+                    return detail
+        return None
+
     def error_response(self, message, status_code=400, data=None):
+        detail = self._extract_error_detail(data)
+        if detail and detail not in message:
+            message = f"{message}: {detail}"
         return Response({
             "success": False,
             "statusCode": status_code,
@@ -291,10 +310,10 @@ class ProviderProfileStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        profile_done=False
-        if ProviderProfile.provider_profile_setup_done:
-            # profile_done = ProviderProfile.objects.filter(user=request.user).exists()
-            profile_done = True
+        #profile_done=False
+        # if ProviderProfile.provider_profile_setup_done:
+        profile_done = ProviderProfile.objects.filter(user=request.user).exists()
+            #profile_done = True
         return Response({
             "provider_profile_setup_done": profile_done,
             "current_mode": request.user.role
@@ -321,10 +340,10 @@ class SwitchUserModeView(APIView):
             if not profile_done:
                 return Response(
                     {
-                        "error": "Provider profile is not set up yet",
+                        #"error": "Provider profile is not set up yet",
                         "provider_profile_setup_done": False
                     },
-                    status=400
+                    status=200
                 )
 
         if target_mode == "receiver":
