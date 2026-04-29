@@ -565,7 +565,7 @@ from rest_framework import status
 from .models import BankDetails, ProviderProfile
 from .serializers import BankDetailsSerializer
 
-@api_view(['POST'])
+@api_view(['POST', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def add_bank_details(request):
     try:
@@ -574,14 +574,22 @@ def add_bank_details(request):
         
         # Check if bank details already exist
         bank_details, created = BankDetails.objects.get_or_create(provider=provider)
+
+        # PATCH should update existing bank details only
+        if request.method == 'PATCH' and created:
+            return Response(
+                {'error': 'No bank details found to update'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
         # Update with new data
         serializer = BankDetailsSerializer(bank_details, data=request.data, partial=True)
         
         if serializer.is_valid():
             serializer.save()
+            message = 'Bank details saved successfully' if created else 'Bank details updated successfully'
             return Response({
-                'message': 'Bank details saved successfully',
+                'message': message,
                 'data': serializer.data
             }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
         

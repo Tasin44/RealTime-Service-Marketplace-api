@@ -3,7 +3,7 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ServiceCategoryViewSet, ProviderProfileViewSet, stripe_connect_onboard, stripe_connection_status, stripe_onboard_complete,add_bank_details,get_bank_details
+from .views import ServiceCategoryViewSet, ProviderProfileViewSet, stripe_connect_onboard, stripe_connection_status, stripe_onboard_complete, add_bank_details, get_bank_details
 
 # Create router for automatic URL routing
 router = DefaultRouter()
