@@ -511,7 +511,7 @@ def stripe_connect_onboard(request):
     account_link = stripe.AccountLink.create(
         account=account_id,
         refresh_url=f"{settings.BASE_URL}/provider/stripe/refresh",  # Update with your frontend URL
-        return_url=f"{settings.BASE_URL}/provider/stripe/success?account_id={account_id}",
+        return_url=f"{settings.BASE_URL}/provider/stripe/onboard-complete/?account_id={account_id}",
         type='account_onboarding',
     )
 
@@ -528,7 +528,7 @@ def stripe_connect_onboard(request):
 def stripe_onboard_complete(request):
     account_id = request.GET.get('account_id')
     if not account_id:
-        return redirect(f"{settings.BASE_URL}/provider/dashboard?stripe=error")
+        return render(request, "failure.html")
 
     try:
         provider = ProviderProfile.objects.get(provider_stripe_account_id=account_id)
@@ -539,11 +539,10 @@ def stripe_onboard_complete(request):
             provider.stripe_connection_date = timezone.now()
             provider.stripe_details_submitted = account.details_submitted
             provider.save()
-            return redirect(f"{settings.BASE_URL}/provider/dashboard?stripe=success")
-        else:
-            return redirect(f"{settings.BASE_URL}/provider/dashboard?stripe=incomplete")
+            return render(request, "success.html")
+        return render(request, "failure.html")
     except Exception:
-        return redirect(f"{settings.BASE_URL}/provider/dashboard?stripe=error")
+        return render(request, "failure.html")
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

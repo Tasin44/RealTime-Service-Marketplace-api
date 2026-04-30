@@ -977,16 +977,26 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
         webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+        print("Stripe webhook received")
+        print(f"Stripe signature header present: {bool(sig_header)}")
+        print(f"Payload size: {len(payload) if payload else 0}")
         
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-        except (ValueError, stripe.error.SignatureVerificationError):
+        except ValueError as exc:
+            print(f"Stripe webhook invalid payload: {exc}")
             return Response(status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.SignatureVerificationError as exc:
+            print(f"Stripe webhook signature verification failed: {exc}")
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"Stripe webhook event type: {event.get('type')}")
         
         # ✅ HANDLE PAYMENT LINK COMPLETION (checkout.session.completed)
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
             quotation_id = session.get('metadata', {}).get('quotation_id')
+            print(f"Payment Link completed. Quotation ID from metadata: {quotation_id}")
             
             if quotation_id:
                 try:
@@ -999,17 +1009,28 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                                     # ✅ MARK PAYMENT AS PAID
                     quotation.payment_status = 'paid'
                     quotation.save(update_fields=['quotation_status', 'payment_status'])
+                    print(
+                        "Quotation marked paid via payment link. "
+                        f"quotation_id={quotation.id}, quotation_status={quotation.quotation_status}, "
+                        f"payment_status={quotation.payment_status}"
+                    )
                 except Quotation.DoesNotExist:
+                    print(f"Quotation not found for payment link. quotation_id={quotation_id}")
                     pass
         
         # HANDLE PAYMENT INTENT SUCCESS
         if event['type'] == 'payment_intent.succeeded':
             payment_intent = event['data']['object']
+            print(f"PaymentIntent succeeded. payment_intent_id={payment_intent.get('id')}")
             
             try:
                 order = Order.objects.get(payment_intent_id=payment_intent['id'])
                 order.payment_status = 'paid'
                 order.save(update_fields=['payment_status'])
+                print(
+                    "Order marked paid via payment intent. "
+                    f"order_id={order.order_id}, payment_status={order.payment_status}"
+                )
                 
                 # CREATE TRANSACTION RECORD
                 Transaction.objects.create(
@@ -1023,6 +1044,10 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                 )
                 
             except Order.DoesNotExist:
+                print(
+                    "Order not found for payment intent. "
+                    f"payment_intent_id={payment_intent.get('id')}"
+                )
                 pass
         
         return Response(status=status.HTTP_200_OK)
