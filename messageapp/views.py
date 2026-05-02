@@ -5,7 +5,7 @@ from rest_framework import viewsets, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q, Prefetch, Max
+from django.db.models import Q, Prefetch, Max, F
 from django.utils import timezone
 from rest_framework.pagination import PageNumberPagination
 from drf_yasg.utils import swagger_auto_schema
@@ -116,11 +116,15 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
         # Filter based on user role - show conversations user is part of
         if user.role == 'provider':
             # If user is a provider
-            return queryset.filter(provider__user=user)
+            return queryset.filter(provider__user=user).exclude(
+                receiver__user=F('provider__user')
+            )
         
         if user.role == 'receiver':
             # If user is a receiver
-            return queryset.filter(receiver__user=user)
+            return queryset.filter(receiver__user=user).exclude(
+                receiver__user=F('provider__user')
+            )
             
         # If user has no profile, return empty
         return queryset.none()

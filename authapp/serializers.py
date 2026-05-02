@@ -76,7 +76,7 @@ class SignupSerializer(serializers.Serializer):
         user.role = "receiver"
         user.save(update_fields=["role"])
 
-        ReceiverProfile.objects.create(user=user)
+        # ReceiverProfile.objects.create(user=user)
         return user
 
     '''

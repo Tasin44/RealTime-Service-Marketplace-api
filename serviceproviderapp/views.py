@@ -16,6 +16,8 @@ from .models import (
     ServiceCategory, ProviderProfile, ProviderKeyword,
     ProviderWorkImage, ProviderDocument
 )
+from servicereceiverapp.models import ReceiverProfile
+from messageapp.models import Conversation
 from .serializers import (
     ServiceCategorySerializer, ProviderProfileListSerializer,
     ProviderProfileDetailSerializer, ProviderProfileCreateUpdateSerializer,
@@ -182,6 +184,19 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         List providers with advanced filtering
         Supports: country, category, rating, verification status, search
         """
+        if request.user.role != 'receiver':
+            return self.error_response(
+                "Only receivers can view providers list",
+                status_code=403
+            )
+
+        receiver = ReceiverProfile.objects.filter(user=request.user).first()
+        if not receiver:
+            return self.error_response(
+                "Receiver profile not found",
+                status_code=404
+            )
+
         queryset = self.get_queryset().filter(user__role='provider')
         '''
         ❌Previous issue: When a user becomes provider, he also see him on the provider list, to get rid of this, I just include user_role='provider'
@@ -245,11 +260,57 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         # Paginate and return
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            provider_ids = [provider.id for provider in page]
+            conversation_status_map = {}
+            print("DEBUG receiver:", receiver)
+            print("DEBUG provider_ids:", provider_ids)
+            print("DEBUG conversations found:", Conversation.objects.filter(
+                receiver=receiver,
+                provider_id__in=provider_ids
+            ).values_list('provider_id', 'conversation_status'))
+            for provider_id, provider_user_id, conv_status in Conversation.objects.filter(
+                # receiver=receiver,
+                # provider_id__in=provider_ids
+                receiver__user=request.user,          # ← safer lookup
+                provider_id__in=provider_ids
+            ).values_list('provider_id', 'provider__user_id', 'conversation_status'):
+                conversation_status_map[str(provider_id)] = conv_status
+                conversation_status_map[str(provider_user_id)] = conv_status
+            serializer = self.get_serializer(
+                page,
+                many=True,
+                context={
+                    'request': request,
+                    'conversation_status_map': conversation_status_map
+                }
+            )
             return self.get_paginated_response(serializer.data)
         
         #serializer = self.get_serializer(queryset, many=True)
-        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        provider_ids = list(queryset.values_list('id', flat=True))
+        conversation_status_map = {}
+        print("DEBUG receiver:", receiver)
+        print("DEBUG provider_ids:", provider_ids)
+        print("DEBUG conversations found:", Conversation.objects.filter(
+            receiver=receiver,
+            provider_id__in=provider_ids
+        ).values_list('provider_id', 'conversation_status'))
+        for provider_id, provider_user_id, conv_status in Conversation.objects.filter(
+            # receiver=receiver,
+            # provider_id__in=provider_ids
+            receiver__user=request.user,          # ← safer lookup
+            provider_id__in=provider_ids
+        ).values_list('provider_id', 'provider__user_id', 'conversation_status'):
+            conversation_status_map[str(provider_id)] = conv_status
+            conversation_status_map[str(provider_user_id)] = conv_status
+        serializer = self.get_serializer(
+            queryset,
+            many=True,
+            context={
+                'request': request,
+                'conversation_status_map': conversation_status_map
+            }
+        )
         return Response(serializer.data)
     
     @swagger_auto_schema(
@@ -264,6 +325,19 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='top-rated')
     def top_rated(self, request):
+        if request.user.role != 'receiver':
+            return self.error_response(
+                "Only receivers can view top-rated providers",
+                status_code=403
+            )
+
+        receiver = ReceiverProfile.objects.filter(user=request.user).first()
+        if not receiver:
+            return self.error_response(
+                "Receiver profile not found",
+                status_code=404
+            )
+
         category_id = request.query_params.get('category', None)
         country = request.query_params.get('country', None)
         limit = request.query_params.get('limit', 10)
@@ -302,7 +376,58 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         )[:limit]  # Limit in DB query (efficient)
         
         # Serialize and return
-        serializer = TopRatedProviderSerializer(queryset, many=True)
+        provider_ids = list(queryset.values_list('id', flat=True))
+        conversation_status_map = {}
+        for provider_id, provider_user_id, status in Conversation.objects.filter(
+            receiver=receiver,
+            provider_id__in=provider_ids
+        ).values_list('provider_id', 'provider__user_id', 'conversation_status'):
+            conversation_status_map[str(provider_id)] = status
+            conversation_status_map[str(provider_user_id)] = status
+
+        serializer = TopRatedProviderSerializer(
+            queryset,
+            many=True,
+            context={
+                'request': request,
+                'conversation_status_map': conversation_status_map
+            }
+        )
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        if request.user.role != 'receiver':
+            return self.error_response(
+                "Only receivers can view provider details",
+                status_code=403
+            )
+
+        receiver = ReceiverProfile.objects.filter(user=request.user).first()
+        if not receiver:
+            return self.error_response(
+                "Receiver profile not found",
+                status_code=404
+            )
+
+        provider = self.get_object()
+        conversation_status_map = {}
+        status_tuple = Conversation.objects.filter(
+            receiver=receiver,
+            provider=provider
+        ).values_list('provider_id', 'provider__user_id', 'conversation_status').first()
+
+        if status_tuple:
+            provider_id, provider_user_id, status = status_tuple
+            conversation_status_map[str(provider_id)] = status
+            conversation_status_map[str(provider_user_id)] = status
+
+        serializer = self.get_serializer(
+            provider,
+            context={
+                'request': request,
+                'conversation_status_map': conversation_status_map
+            }
+        )
         return Response(serializer.data)
     
     @swagger_auto_schema(

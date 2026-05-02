@@ -129,14 +129,14 @@ class ConversationListSerializer(serializers.ModelSerializer):
         if not request:
             return None
         current_user = request.user
-        
+
         # Return the OTHER person in conversation
-        if obj.receiver.user == current_user:
-            # Current user is receiver → show provider
+        if obj.receiver.user_id == current_user.id and obj.provider.user_id != current_user.id:
             other = obj.provider
-        else:
-            # Current user is provider → show receiver
+        elif obj.provider.user_id == current_user.id and obj.receiver.user_id != current_user.id:
             other = obj.receiver
+        else:
+            return None
         
         return {
             'id': other.user.id,

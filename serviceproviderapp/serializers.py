@@ -114,6 +114,7 @@ class ProviderProfileListSerializer(serializers.ModelSerializer):
     user_id = serializers.CharField(source='user.id', read_only=True)
     # Count of work images (annotated in view to avoid N+1)
     work_images_count = serializers.IntegerField(read_only=True)
+    conversation_status = serializers.SerializerMethodField()
     
     class Meta:
         model = ProviderProfile
@@ -122,12 +123,16 @@ class ProviderProfileListSerializer(serializers.ModelSerializer):
             'category_image', 'service_title', 'provider_description',
             'provider_experience', 'provider_done_work', 'provider_rating',
             'provider_service_charge', 'provider_country', 'provider_city','provider_profile_setup_done','provider_stripe_account_id','stripe_connected',
-            'provider_is_verified', 'work_images_count', 'created_at'
+            'provider_is_verified', 'work_images_count', 'conversation_status', 'created_at'
         ]
 
     def get_category_image(self, obj):
         request = self.context.get('request')
         return _absolute_media_url(request, obj.service_category.category_image)
+
+    def get_conversation_status(self, obj):
+        status_map = self.context.get('conversation_status_map', {})
+        return status_map.get(str(obj.user_id)) or status_map.get(str(obj.id))
 
 class ProviderProfileDetailSerializer(serializers.ModelSerializer):
     """
@@ -148,6 +153,7 @@ class ProviderProfileDetailSerializer(serializers.ModelSerializer):
     
     # Related documents (prefetched in view)
     documents = ProviderDocumentSerializer(many=True, source='providerdocument_set', read_only=True)
+    conversation_status = serializers.SerializerMethodField()
 
     class Meta:
         model = ProviderProfile
@@ -158,9 +164,14 @@ class ProviderProfileDetailSerializer(serializers.ModelSerializer):
             'provider_licence_number', 'provider_country',
             'provider_city', 'provider_service_area', 'provider_total_hired','provider_profile_setup_done',
             'provider_total_earnings', 'provider_available_balance',
-            'provider_is_verified', 'keywords', 'work_images', 'documents','provider_stripe_account_id','stripe_connected',
+            'provider_is_verified', 'keywords', 'work_images', 'documents',
+            'provider_stripe_account_id','stripe_connected', 'conversation_status',
             'created_at', 'updated_at'
         ]
+
+    def get_conversation_status(self, obj):
+        status_map = self.context.get('conversation_status_map', {})
+        return status_map.get(str(obj.user_id)) or status_map.get(str(obj.id))
 
 class ProviderProfileCreateUpdateSerializer(serializers.ModelSerializer):
 
@@ -289,14 +300,19 @@ class TopRatedProviderSerializer(serializers.ModelSerializer):
     # These will be annotated in the view
     average_rating = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
     total_work = serializers.IntegerField(read_only=True)
+    conversation_status = serializers.SerializerMethodField()
     
     class Meta:
         model = ProviderProfile
         fields = [
             'id','user_name','user_image', 'category_name', 'service_title',
             'provider_country', 'provider_city', 'average_rating','provider_stripe_account_id','stripe_connected',
-            'total_work', 'provider_is_verified'
+            'total_work', 'provider_is_verified', 'conversation_status'
         ]    
+
+    def get_conversation_status(self, obj):
+        status_map = self.context.get('conversation_status_map', {})
+        return status_map.get(str(obj.user_id)) or status_map.get(str(obj.id))
 
 
 
