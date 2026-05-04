@@ -200,7 +200,7 @@ class ProviderProfileCreateUpdateSerializer(serializers.ModelSerializer):
             'id','user','user_image', 'service_category', 'service_title',
             'provider_description', 'provider_experience', 'provider_service_charge',
             'provider_language', 'provider_licence_number',
-            'provider_country', 'provider_city', 'provider_state', 'provider_zip_code','provider_service_area','provider_profile_setup_done','provider_stripe_account_id','stripe_connected',
+            'provider_country', 'provider_city', 'provider_state', 'provider_zip_code','provider_service_area','provider_profile_setup_done','provider_stripe_account_id','stripe_connected','provider_service_area',
             'keywords',          # input
             'keywords_display'   # output
         ]

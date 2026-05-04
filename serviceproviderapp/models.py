@@ -11,6 +11,22 @@ class ServiceCategory(models.Model):
     def __str__(self):
         return self.category_name
 
+'''
+[
+    {'id': 1, 'category_name': 'Plumbing'},
+    {'id': 2, 'category_name': 'Roofing'},
+    {'id': 3, 'category_name': 'Painting'},
+    {'id': 4, 'category_name': 'Cleaning'},
+    {'id': 5, 'category_name': 'Windows'},
+    {'id': 6, 'category_name': 'Concrete'},
+    {'id': 7, 'category_name': 'Handyperson'},
+    {'id': 8, 'category_name': 'HVAC'},
+    {'id': 9, 'category_name': 'Landscaping'},
+    {'id': 10, 'category_name': 'Remodeling'},
+    {'id': 11, 'category_name': 'Electrical'}
+]
+
+'''
 
 class ProviderProfile(models.Model):
     # provider_id = models.IntegerField(primary_key=True)

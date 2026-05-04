@@ -429,6 +429,43 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             }
         )
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get', 'patch'], url_path='me')
+    def me(self, request):
+        if request.user.role != 'provider':
+            return self.error_response(
+                "Only providers can access their own profile",
+                status_code=403
+            )
+
+        try:
+            provider = ProviderProfile.objects.get(user=request.user)
+        except ProviderProfile.DoesNotExist:
+            return self.error_response(
+                "Provider profile not found",
+                status_code=404
+            )
+
+        if request.method == 'PATCH':
+            serializer = ProviderProfileCreateUpdateSerializer(
+                provider,
+                data=request.data,
+                partial=True,
+                context={'request': request}
+            )
+            if not serializer.is_valid():
+                return self.error_response(
+                    "Validation failed",
+                    status_code=400,
+                    data=serializer.errors
+                )
+            serializer.save()
+
+        serializer = ProviderProfileDetailSerializer(
+            provider,
+            context={'request': request}
+        )
+        return Response(serializer.data)
     
     @swagger_auto_schema(
         operation_description="Upload work images for provider portfolio",
