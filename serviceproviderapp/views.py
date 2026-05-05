@@ -432,12 +432,6 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get', 'patch'], url_path='me')
     def me(self, request):
-        if request.user.role != 'provider':
-            return self.error_response(
-                "Only providers can access their own profile",
-                status_code=403
-            )
-
         try:
             provider = ProviderProfile.objects.get(user=request.user)
         except ProviderProfile.DoesNotExist:
