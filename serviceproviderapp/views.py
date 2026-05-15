@@ -100,16 +100,26 @@ class ServiceCategoryViewSet(StandardResponseMixin,viewsets.ReadOnlyModelViewSet
         operation_description="Get all service categories",
         responses={200: ServiceCategorySerializer(many=True)}
     )
+
+    # def list(self, request, *args, **kwargs):
+
+    #     queryset = self.get_queryset()
+    #     serializer = self.get_serializer(queryset, many=True , context={'request': request})
+        
+    #     return Response(serializer.data)
+
     def list(self, request, *args, **kwargs):
+        from django.core.cache import cache
+
+        cache_key = 'service_categories_all'
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
 
         queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True , context={'request': request})
-        
-        # # Cache the result for 1 hour
-        # cache.set(cache_key, serializer.data, 3600)
-        
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        cache.set(cache_key, serializer.data, 60 * 60)  # 1 hour TTL — categories rarely change
         return Response(serializer.data)
-
 class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated]
@@ -190,12 +200,27 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                 status_code=403
             )
 
+
+        from django.core.cache import cache
+        import hashlib
+
+        # Build a cache key that includes all filter params + user id
+        params = request.query_params.urlencode()
+        param_hash = hashlib.md5(params.encode()).hexdigest()[:8]
+        cache_key = f'provider_list_{request.user.id}_{param_hash}'
+
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+        
+
+
         receiver = ReceiverProfile.objects.filter(user=request.user).first()
         if not receiver:
-            return self.error_response(
-                "Receiver profile not found",
-                status_code=404
-            )
+                return self.error_response(
+                    "Receiver profile not found",
+                    status_code=404
+                )
 
         queryset = self.get_queryset().filter(user__role='provider')
         '''
@@ -311,8 +336,14 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                 'conversation_status_map': conversation_status_map
             }
         )
-        return Response(serializer.data)
+        #return Response(serializer.data)
+        # Before the final return, cache the paginated response data:
+        # If using get_paginated_response, cache its .data instead:
+        response = self.get_paginated_response(serializer.data)
+        cache.set(cache_key, response.data, 60 * 5)  # 5 min TTL
+        return response
     
+
     @swagger_auto_schema(
         operation_description="Get top-rated providers based on work done and rating",
         manual_parameters=[
@@ -454,6 +485,11 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                     data=serializer.errors
                 )
             serializer.save()
+            
+        # Bust provider list cache for all receivers when a provider updates their profile
+        from django.core.cache import cache
+        cache.delete_pattern('provider_list_*')  # requires django-redis
+
 
         serializer = ProviderProfileDetailSerializer(
             provider,

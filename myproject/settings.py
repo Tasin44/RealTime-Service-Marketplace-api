@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'quoteapp',
     'channels',  # ✅ For messageapp
     'messageapp',
+    'notificationapp',
 
 ]
 # ✅ For messageapp
@@ -135,6 +136,7 @@ DATABASES: Dict[str, Dict[str, Any]] = {
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 60,  # Reuse DB connections for 60s instead of reconnecting every request
     }
 }
 
@@ -221,10 +223,27 @@ REST_FRAMEWORK : Dict[str, Any] = {
 
 
 # Example configuration
+'''
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',  # Unique name for cache
+    }
+}
+'''
+'''
+ current cache uses in-memory (LocMemCache) which is per-process, doesn't persist, and dies on restart. You already have Redis running on port 6380 for channels — use it for caching too.
+ Why: LocMemCache is per-process and shared nothing. Django on Gunicorn runs multiple workers — each has its own isolated cache that never syncs. Redis is shared across all workers, persists restarts, and is already running in your stack.
+'''
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6380/1',  # db=1, keep db=0 for channels
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'TIMEOUT': 300,  # 5 minutes default TTL
     }
 }
 
@@ -297,6 +316,9 @@ AUTH_USER_MODEL = 'authapp.User'
 
 KYCAID_API_KEY = os.environ.get('KYCAID_API_KEY')
 KYCAID_FORM_ID = os.environ.get('KYCAID_FORM_ID')
+
+ONESIGNAL_APP_ID = os.environ.get("ONESIGNAL_APP_ID")
+ONESIGNAL_REST_API_KEY = os.environ.get("ONESIGNAL_REST_API_KEY")
 
 #this two used previously-----------------------------------------------------------------------------------
 # ✅ Fix 4: Stripe keys from env

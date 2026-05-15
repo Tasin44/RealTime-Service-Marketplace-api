@@ -296,10 +296,25 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
             'image': _absolute_media_url(request, other.user.image)
         }
     
+    '''
     def get_messages(self, obj):
         # Get messages from prefetched data
         messages = obj.message_set.all().order_by('created_at')
         return MessageSerializer(messages, many=True, context=self.context).data
+    '''
+
+    def get_messages(self, obj):
+        # Use prefetched data if available (from retrieve view)
+        # obj.message_set.all() bypasses the prefetch cache — use _prefetched_objects_cache
+        if hasattr(obj, '_prefetched_objects_cache') and 'message_set' in obj._prefetched_objects_cache:
+            messages = sorted(
+                obj._prefetched_objects_cache['message_set'],
+                key=lambda m: m.created_at
+            )
+        else:
+            messages = obj.message_set.select_related('sender').order_by('created_at')
+        return MessageSerializer(messages, many=True, context=self.context).data
+    
     
     def get_expires_at(self, obj):  # ✅ Add this method
         if obj.conversation_status == 'expired':

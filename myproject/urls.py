@@ -27,6 +27,7 @@ urlpatterns = [
     path('receiver/', include('servicereceiverapp.urls')),
     path('offer/', include('quoteapp.urls')),
     path('message/', include('messageapp.urls')),
+    path('notification/', include('notificationapp.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(

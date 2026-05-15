@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework.pagination import PageNumberPagination
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.core.cache import cache
 
 from .models import Conversation, Message
 from serviceproviderapp.models import ProviderProfile
@@ -158,6 +159,17 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
 
         # 🔹 Filter by conversation status if provided
         status_filter = request.query_params.get('status')
+
+        page_num = request.query_params.get('page', '1')
+        cache_key = f'conversation_list_{request.user.id}_{status_filter}_{page_num}'
+
+
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        queryset = self.get_queryset()
+
         if status_filter in ['pending', 'active', 'expired']:
             queryset = queryset.filter(conversation_status=status_filter)
 
@@ -175,7 +187,10 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
                 many=True,
                 context={'request': request}
             )
-            return self.get_paginated_response(serializer.data)
+            #return self.get_paginated_response(serializer.data)
+            response = self.get_paginated_response(serializer.data)
+            cache.set(cache_key, response.data, 60 * 2)  # 2 min TTL — messages change often
+            return response
 
         # 🔹 Fallback (normally not hit if pagination is enabled)
         serializer = self.get_serializer(
@@ -296,8 +311,20 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
         responses={200: ConversationDetailSerializer()}
     )
     def retrieve(self, request, pk=None):
+        '''
         conversation = self.get_object()
         #serializer = self.get_serializer(conversation)
+        '''
+        # Add prefetch so serializer doesn't re-query
+        conversation = Conversation.objects.select_related(
+            'receiver__user', 'provider__user'
+        ).prefetch_related(
+            Prefetch(
+                'message_set',
+                queryset=Message.objects.select_related('sender').order_by('created_at')
+            )
+        ).get(pk=pk)
+
         serializer = self.get_serializer(
             conversation,
             context={'request': request}  # ✅ ADD THIS
@@ -379,7 +406,7 @@ class MessageViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             return MessageCreateSerializer
         return MessageSerializer
     
-
+    '''
     def list(self, request, *args, **kwargs):
         conversation_id = request.query_params.get('conversation_id')
         if not conversation_id:
@@ -418,8 +445,57 @@ class MessageViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             "results": messages
         })
     
+    '''
 
 
+    def list(self, request, *args, **kwargs):
+        conversation_id = request.query_params.get('conversation_id')
+        if not conversation_id:
+            return self.error_response("conversation_id required", 400)
+
+        try:
+            conversation = Conversation.objects.select_related(
+                'receiver__user', 'provider__user'
+            ).get(conversation_id=conversation_id)
+        except Conversation.DoesNotExist:
+            return self.error_response("Conversation not found", 404)
+
+        current_user = request.user
+        other = (
+            conversation.provider.user
+            if conversation.receiver.user == current_user
+            else conversation.receiver.user
+        )
+
+        queryset = self.get_queryset()  # Already filtered by conversation_id via query param
+
+        # ✅ Paginate instead of loading everything
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = MessageSerializer(page, many=True, context={"request": request})
+            paginated = self.get_paginated_response(serializer.data)
+            paginated.data['conversation'] = conversation.conversation_id
+            paginated.data['other_person'] = {
+                "id": str(other.id),
+                "name": other.name,
+                "email": other.email,
+                "image": request.build_absolute_uri(other.image.url) if other.image else None
+            }
+            paginated.data['conversation_status'] = conversation.conversation_status
+            return paginated
+
+        # Fallback (no paginator configured)
+        messages = MessageSerializer(queryset, many=True, context={"request": request}).data
+        return Response({
+            "count": len(messages),
+            "conversation": conversation.conversation_id,
+            "other_person": {
+                "id": str(other.id), "name": other.name, "email": other.email,
+                "image": request.build_absolute_uri(other.image.url) if other.image else None
+            },
+            "conversation_status": conversation.conversation_status,
+            "results": messages
+        })
 
     @swagger_auto_schema(
         operation_description="Send a message in conversation",
@@ -445,6 +521,15 @@ class MessageViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             
             message = serializer.save()
             
+            from django.core.cache import cache
+            # Bust both users' conversation caches
+            cache.delete_pattern(f'conversation_list_{request.user.id}_*')
+            other_user_id = (
+                message.conversation.provider.user_id
+                if request.user == message.conversation.receiver.user
+                else message.conversation.receiver.user_id
+            )
+            cache.delete_pattern(f'conversation_list_{other_user_id}_*')
 
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
