@@ -60,11 +60,14 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'myproject.asgi.application'
 
 # ✅ ADD Channels layer (using Redis) For messageapp
+REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6380'))
+
 CHANNEL_LAYERS : Dict[str, Dict[str, Any]] = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('127.0.0.1', 6380)],
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
         },
     },
 }
@@ -236,10 +239,12 @@ CACHES = {
  Why: LocMemCache is per-process and shared nothing. Django on Gunicorn runs multiple workers — each has its own isolated cache that never syncs. Redis is shared across all workers, persists restarts, and is already running in your stack.
 '''
 
+REDIS_CACHE_DB = os.environ.get('REDIS_CACHE_DB', '1')
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6380/1',  # db=1, keep db=0 for channels
+        'LOCATION': f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CACHE_DB}",  # db=1, keep db=0 for channels
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         },
