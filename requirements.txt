@@ -23,6 +23,7 @@ celery[redis]==5.2.3
 django-ratelimit==4.1.0
 cryptography==39.0.1  
 django-cors-headers
+whitenoise
 requests 
 django-environ
 dotenv

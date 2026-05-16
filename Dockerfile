@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
+RUN chmod +x /app/entrypoint.sh
 RUN adduser --disabled-password --gecos "" appuser \
     ; chown -R appuser:appuser /app
 

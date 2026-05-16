@@ -6,6 +6,8 @@ services:
     depends_on:
       - db
       - redis
+    volumes:
+      - /var/www/mychiripa_media:/app/media
     ports:
       - "8000:8000"
 

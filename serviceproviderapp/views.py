@@ -550,6 +550,45 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         serializer = ProviderWorkImageUploadSerializer(created_images, many=True)
         
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path=r'upload-work-image/(?P<user_id>[^/.]+)',
+        parser_classes=[MultiPartParser, FormParser]
+    )
+    def upload_work_image_by_user(self, request, user_id=None):
+        """Upload work images using provider's user UUID."""
+        try:
+            provider = ProviderProfile.objects.get(user__id=user_id)
+        except ProviderProfile.DoesNotExist:
+            return Response({"detail": "Provider profile not found"}, status=404)
+
+        if provider.user != request.user:
+            return Response(
+                {"error": "You can only upload images to your own profile"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        images = request.FILES.getlist('images') or request.FILES.getlist('image')
+
+        if not images:
+            return Response(
+                {"error": "No images provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_images = []
+        for img in images:
+            created_images.append(
+                ProviderWorkImage.objects.create(
+                    provider=provider,
+                    image=img
+                )
+            )
+
+        serializer = ProviderWorkImageUploadSerializer(created_images, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     @swagger_auto_schema(
         operation_description="Delete a work image",
@@ -589,7 +628,7 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-    @action(detail=True, methods=['post'], url_path='submit-document',parser_classes=[MultiPartParser, FormParser])
+    @action(detail=True, methods=['post'], url_path='submit-document', parser_classes=[MultiPartParser, FormParser])
     def submit_document(self, request, pk=None):
         provider = self.get_object()
 
@@ -626,6 +665,53 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         doc.status = "pending"
         doc.save()
 
+
+        return Response(
+            ProviderDocumentSerializer(doc).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path=r'submit-document/(?P<user_id>[^/.]+)',
+        parser_classes=[MultiPartParser, FormParser]
+    )
+    def submit_document_by_user(self, request, user_id=None):
+        """Submit KYC document using provider's user UUID."""
+        try:
+            provider = ProviderProfile.objects.get(user__id=user_id)
+        except ProviderProfile.DoesNotExist:
+            return Response({"detail": "Provider profile not found"}, status=404)
+
+        if provider.user != request.user:
+            return Response({"detail": "Forbidden ! You can only verify your own profile"}, status=403)
+
+        document_type = request.data.get("document_type")
+        document_front = request.FILES.get("document_front")
+
+        if not document_type or not document_front:
+            return Response(
+                {"detail": "document_type and document_front are required"},
+                status=400
+            )
+
+        doc = ProviderDocument.objects.create(
+            provider=provider,
+            document_type=document_type,
+            document_front=document_front,
+            status="pending"
+        )
+
+        result = verify_document_with_kycaid(
+            document_file=document_front,
+            document_type=document_type,
+            country_code=COUNTRY_ISO_MAP.get(provider.provider_country)
+        )
+
+        doc.verification_id = result["verification_id"]
+        doc.status = "pending"
+        doc.save()
 
         return Response(
             ProviderDocumentSerializer(doc).data,
