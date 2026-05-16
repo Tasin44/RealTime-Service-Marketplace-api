@@ -142,6 +142,8 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             return ConversationStatusUpdateSerializer
         return ConversationDetailSerializer
     
+
+    
     @swagger_auto_schema(
         operation_description="Get list of conversations (inbox)",
         manual_parameters=[
@@ -155,18 +157,19 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
 
-        queryset = self.get_queryset()
+        # queryset = self.get_queryset()
 
-        # 🔹 Filter by conversation status if provided
+        # 🔹 Filter by conversation status if provided# ✅ Get status_filter FIRST before any queryset call
         status_filter = request.query_params.get('status')
 
-        page_num = request.query_params.get('page', '1')
-        cache_key = f'conversation_list_{request.user.id}_{status_filter}_{page_num}'
+        # ✅ Step 1: expire conversations FIRST using a plain queryset (no prefetch attached)
+        # user = request.user
+        # base_qs = Conversation.objects.filter(
+        #     **({'provider__user': user} if user.role == 'provider' else {'receiver__user': user})
+        # )
+        # # ✅ Expire BEFORE get_queryset() — uses a raw queryset with no prefetch
+        self._auto_expire_conversations_for_user(request.user)
 
-
-        cached = cache.get(cache_key)
-        if cached:
-            return Response(cached)
 
         queryset = self.get_queryset()
 
@@ -174,7 +177,7 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             queryset = queryset.filter(conversation_status=status_filter)
 
         # 🔹 Auto-expire pending conversations
-        self._auto_expire_conversations(queryset)
+        # self._auto_expire_conversations(queryset)
 
         # 🔹 Order by most recently updated
         queryset = queryset.order_by('-updated_at')
@@ -187,10 +190,7 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
                 many=True,
                 context={'request': request}
             )
-            #return self.get_paginated_response(serializer.data)
-            response = self.get_paginated_response(serializer.data)
-            cache.set(cache_key, response.data, 60 * 2)  # 2 min TTL — messages change often
-            return response
+            return self.get_paginated_response(serializer.data)
 
         # 🔹 Fallback (normally not hit if pagination is enabled)
         serializer = self.get_serializer(
@@ -200,6 +200,7 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
         )
         return Response(serializer.data)
 
+    '''
     def _auto_expire_conversations(self, queryset):
         # Auto-expire pending conversations past 24 hours
         expired_conversations = queryset.filter(
@@ -207,6 +208,27 @@ class ConversationViewSet(StandardResponseMixin, viewsets.ModelViewSet):
             expires_at__lte=timezone.now()
         )
         expired_conversations.update(conversation_status='expired')
+    '''
+    '''
+    def _auto_expire_conversations(self, queryset):
+        # ✅ Use .filter() on the passed queryset but call update()
+        # on a VALUES-only queryset to avoid touching prefetch state
+        queryset.filter(
+            conversation_status='pending',
+            expires_at__lte=timezone.now()
+        ).values('conversation_id').update(conversation_status='expired')  # ← .values() before .update() avoids prefetch interference
+    '''
+    def _auto_expire_conversations_for_user(self, user):
+        # ✅ Completely separate queryset — no prefetch, no interference
+        if user.role == 'provider':
+            qs = Conversation.objects.filter(provider__user=user)
+        else:
+            qs = Conversation.objects.filter(receiver__user=user)
+        
+        qs.filter(
+            conversation_status='pending',
+            expires_at__lte=timezone.now()
+        ).update(conversation_status='expired')
     
     @swagger_auto_schema(
         operation_description="Create new conversation (Receiver initiates)",
