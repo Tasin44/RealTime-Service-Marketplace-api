@@ -228,6 +228,7 @@ class QuotationUpdateStatusSerializer(serializers.ModelSerializer):
 class AcceptedQuotationForOrderSerializer(serializers.ModelSerializer):
     quotation_id = serializers.UUIDField(source='id', read_only=True)
     receiver_user_id = serializers.UUIDField(source='receiver.user.id', read_only=True)
+    order_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Quotation
@@ -239,7 +240,11 @@ class AcceptedQuotationForOrderSerializer(serializers.ModelSerializer):
             'payment_status',
             'service_timeline',
             'created_at',
+            'order_status', 
         ]
+    def get_order_status(self, obj):
+        order = Order.objects.filter(quotation=obj).first()
+        return order.order_status if order else None
 
 class OrderListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for order list"""
