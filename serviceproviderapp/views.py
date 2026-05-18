@@ -222,7 +222,8 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                     status_code=404
                 )
 
-        queryset = self.get_queryset().filter(user__role='provider')
+        # queryset = self.get_queryset().filter(user__role='provider')
+        queryset = self.get_queryset().filter(provider_profile_setup_done=True).exclude(user=request.user)
         '''
         ❌Previous issue: When a user becomes provider, he also see him on the provider list, to get rid of this, I just include user_role='provider'
 
