@@ -251,7 +251,7 @@ class QuotationViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             quote_reject_url = f"{settings.BASE_URL}/offer/quotations/{quotation.id}/update-status/"
 
 
-            message_text = f"""📄 New offer awaiting for {receiver.user.username}
+            message_text = f"""📄 New offer created for {receiver.user.name}
 
             Service: {quotation.service_description}
             Cost: ${quotation.service_cost}
