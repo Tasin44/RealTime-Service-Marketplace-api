@@ -20,7 +20,10 @@ class Notification(models.Model):
         ("conversation_declined", "Conversation Declined"),
         ("quotation_accepted", "Quotation Accepted"),
         ("quotation_declined", "Quotation Declined"),
+        ("quotation_paid", "Quotation Paid"),
         ("order_paid", "Order Paid"),
+        ("order_completed", "Order Completed"),
+        ("order_cancelled", "Order Cancelled"),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
