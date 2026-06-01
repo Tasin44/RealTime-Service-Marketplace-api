@@ -28,6 +28,7 @@ from .serializers import (
 
 )
 from .ai_utils import enhance_service_description
+from notificationapp.notification_helpers import notify_review_created
 
 # Stripe configuration - load from environment variables in production
 stripe.api_key = settings.STRIPE_SECRET_KEY  # Use from settings
@@ -441,6 +442,47 @@ class QuotationViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         quotations = Quotation.objects.filter(
             provider=provider,
             receiver__user__id=receiver_user_id,
+            quotation_status='accepted'
+        ).select_related('receiver__user', 'service_category')
+
+        serializer = AcceptedQuotationForOrderSerializer(quotations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='accepted-for-provider')
+    def accepted_for_provider(self, request):
+        """
+        Receiver-only API:
+        Get accepted quotations of a specific provider
+        """
+        user = request.user
+
+        # Receiver check
+        try:
+            receiver = ReceiverProfile.objects.get(user=user)
+        except ReceiverProfile.DoesNotExist:
+            return Response(
+                {"error": "Only receivers can access this"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        provider_user_id = request.query_params.get('provider_user_id')
+        if not provider_user_id:
+            return Response(
+                {"error": "provider_user_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            provider = ProviderProfile.objects.get(user__id=provider_user_id)
+        except ProviderProfile.DoesNotExist:
+            return Response(
+                {"error": "Provider not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        quotations = Quotation.objects.filter(
+            provider=provider,
+            receiver=receiver,
             quotation_status='accepted'
         ).select_related('receiver__user', 'service_category')
 
@@ -1358,7 +1400,8 @@ class ReviewViewSet(StandardResponseMixin,viewsets.ModelViewSet):
     serializer = self.get_serializer(data=request.data)
     
     if serializer.is_valid():
-        serializer.save()
+        review = serializer.save()
+        notify_review_created(review)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

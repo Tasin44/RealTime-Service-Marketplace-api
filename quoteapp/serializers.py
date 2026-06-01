@@ -228,6 +228,8 @@ class QuotationUpdateStatusSerializer(serializers.ModelSerializer):
 class AcceptedQuotationForOrderSerializer(serializers.ModelSerializer):
     quotation_id = serializers.UUIDField(source='id', read_only=True)
     receiver_user_id = serializers.UUIDField(source='receiver.user.id', read_only=True)
+    provider_user_id = serializers.UUIDField(source='provider.user.id', read_only=True)
+    provider_name = serializers.CharField(source='provider.user.name', read_only=True)
     order_status = serializers.SerializerMethodField()
 
     class Meta:
@@ -235,6 +237,8 @@ class AcceptedQuotationForOrderSerializer(serializers.ModelSerializer):
         fields = [
             'quotation_id',
             'receiver_user_id',
+            'provider_user_id',
+            'provider_name',
             'service_category',
             'service_cost',
             'payment_status',

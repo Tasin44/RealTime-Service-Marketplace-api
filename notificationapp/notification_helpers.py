@@ -180,3 +180,20 @@ def notify_order_cancelled(order):
         _send_and_store(receiver_user, "order_cancelled", title, body_receiver, data_receiver)
         _send_and_store(provider_user, "order_cancelled", title, body_provider, data_provider)
         logger.info("Order cancelled notification sent to both parties. order_id=%s", order.order_id)
+
+
+def notify_review_created(review):
+    """Notify provider when receiver leaves a review."""
+    provider_user = review.provider.user
+    receiver_user = review.receiver.user
+
+    title = "New review received"
+    body = f"{receiver_user.name or receiver_user.email} left a review for your service."
+    data = {
+        "type": "review_created",
+        "review_id": review.id,
+        "order_id": review.order.order_id,
+        "receiver_user_id": str(receiver_user.id),
+    }
+    _send_and_store(provider_user, "review_created", title, body, data)
+    logger.info("Review notification sent. review_id=%s", review.id)

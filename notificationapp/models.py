@@ -24,6 +24,7 @@ class Notification(models.Model):
         ("order_paid", "Order Paid"),
         ("order_completed", "Order Completed"),
         ("order_cancelled", "Order Cancelled"),
+        ("review_created", "Review Created"),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
