@@ -1032,12 +1032,24 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             print(f"Stripe webhook signature verification failed: {exc}")
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        print(f"Stripe webhook event type: {event.get('type')}")
+        '''
+        `stripe.Webhook.construct_event` returns a StripeObject, which doesn't implement `__get__()`. 
+        The webhook is failing when you log `event.get('type')` (and later `payment_intent.get('id')`). 
+        I switched those to dict-style access so the webhook won't 500.
+        '''
+        #print(f"Stripe webhook event type: {event.get('type')}")
+        print(f"Stripe webhook event type: {event['type']}")
         
         # ✅ HANDLE PAYMENT LINK COMPLETION (checkout.session.completed)
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
-            quotation_id = session.get('metadata', {}).get('quotation_id')
+
+            #quotation_id = session.get('metadata', {}).get('quotation_id')
+            # Use bracket notation — StripeObject does not have .get()
+            try:
+                quotation_id = session['metadata']['quotation_id']
+            except (KeyError, TypeError):
+                quotation_id = None
             print(f"Payment Link completed. Quotation ID from metadata: {quotation_id}")
             
             if quotation_id:
@@ -1063,7 +1075,7 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         # HANDLE PAYMENT INTENT SUCCESS
         if event['type'] == 'payment_intent.succeeded':
             payment_intent = event['data']['object']
-            print(f"PaymentIntent succeeded. payment_intent_id={payment_intent.get('id')}")
+            print(f"PaymentIntent succeeded. payment_intent_id={payment_intent['id']}")
             
             try:
                 order = Order.objects.get(payment_intent_id=payment_intent['id'])
@@ -1088,7 +1100,7 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             except Order.DoesNotExist:
                 print(
                     "Order not found for payment intent. "
-                    f"payment_intent_id={payment_intent.get('id')}"
+                    f"payment_intent_id={payment_intent['id']}"
                 )
                 pass
         
