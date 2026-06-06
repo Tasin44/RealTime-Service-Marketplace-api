@@ -1037,14 +1037,14 @@ class OrderViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         The webhook is failing when you log `event.get('type')` (and later `payment_intent.get('id')`). 
         I switched those to dict-style access so the webhook won't 500.
         '''
-        #print(f"Stripe webhook event type: {event.get('type')}")
+        #print(f"Stripe webhook event type: {event.get('type')}")-❌
         print(f"Stripe webhook event type: {event['type']}")
         
         # ✅ HANDLE PAYMENT LINK COMPLETION (checkout.session.completed)
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
 
-            #quotation_id = session.get('metadata', {}).get('quotation_id')
+            #quotation_id = session.get('metadata', {}).get('quotation_id')#❌
             # Use bracket notation — StripeObject does not have .get()
             try:
                 quotation_id = session['metadata']['quotation_id']
