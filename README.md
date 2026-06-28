@@ -1,5 +1,16 @@
 # RealTime Service Marketplace Backend
 
+[![Get it on Google Play](https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png)](https://play.google.com/store/apps/details?id=com.service_connect)
+
+## App Screenshots
+
+<p align="center">
+  <img src="images/1_signup.png" width="200" alt="Signup"/>
+  <img src="images/2_login.png" width="200" alt="Login"/>
+  <img src="images/3_service_provider_profile_setup.png" width="200" alt="Service Provider Profile Setup"/>
+  <img src="images/4_home_page_service_provider.png" width="200" alt="Home Page Service Provider"/>
+</p>
+
 Production-oriented Django backend for a service marketplace platform, built with a modular app architecture, real-time messaging, and payment-ready workflows.
 
 ## Why This Project Stands Out
