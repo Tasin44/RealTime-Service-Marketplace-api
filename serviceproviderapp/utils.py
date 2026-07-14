@@ -60,16 +60,110 @@ from django.conf import settings
 
 BASE_URL = "https://api.kycaid.com"
 
+# Map our internal document_type values to KYCAID API document type identifiers.
+# KYCAID supported types: PASSPORT, DOMESTIC_PASSPORT, DRIVERS_LICENSE,
+# GOVERNMENT_ID, PERMANENT_RESIDENCE_PERMIT, FOREIGN_CITIZEN_PASSPORT, REFUGEE_CARD
+DOCUMENT_TYPE_MAP = {
+    "passport": "PASSPORT",
+    "national_id": "GOVERNMENT_ID",     # KYCAID calls national IDs "GOVERNMENT_ID"
+    "driving_licence": "DRIVERS_LICENSE", # KYCAID spells it LICENSE not LICENCE
+}
+
 COUNTRY_ISO_MAP = {
+    # Asia
     "Bangladesh": "BD",
-    "Brazil": "BR",
-    "United States": "US",
-    "United Kingdom": "GB",
     "India": "IN",
+    "Pakistan": "PK",
+    "Sri Lanka": "LK",
+    "Nepal": "NP",
+    "China": "CN",
+    "Japan": "JP",
+    "South Korea": "KR",
+    "Singapore": "SG",
+    "Malaysia": "MY",
+    "Indonesia": "ID",
+    "Thailand": "TH",
+    "Philippines": "PH",
+    "Vietnam": "VN",
+    # Middle East
+    "United Arab Emirates": "AE",
+    "Saudi Arabia": "SA",
+    "Qatar": "QA",
+    "Kuwait": "KW",
+    "Bahrain": "BH",
+    "Oman": "OM",
+    "Jordan": "JO",
+    "Lebanon": "LB",
+    "Egypt": "EG",
+    "Turkey": "TR",
+    # Africa
+    "Nigeria": "NG",
+    "Ghana": "GH",
+    "Kenya": "KE",
+    "South Africa": "ZA",
+    "Ethiopia": "ET",
+    "Tanzania": "TZ",
+    "Uganda": "UG",
+    # Americas
+    "United States": "US",
     "Canada": "CA",
+    "Brazil": "BR",
+    "Mexico": "MX",
+    "Argentina": "AR",
+    "Colombia": "CO",
+    "Chile": "CL",
+    "Peru": "PE",
+    # Europe
+    "United Kingdom": "GB",
+    "Germany": "DE",
+    "France": "FR",
+    "Italy": "IT",
+    "Spain": "ES",
+    "Netherlands": "NL",
+    "Sweden": "SE",
+    "Norway": "NO",
+    "Denmark": "DK",
+    "Finland": "FI",
+    "Poland": "PL",
+    "Portugal": "PT",
+    "Belgium": "BE",
+    "Switzerland": "CH",
+    "Austria": "AT",
+    "Greece": "GR",
+    "Russia": "RU",
+    "Ukraine": "UA",
+    # Oceania
+    "Australia": "AU",
+    "New Zealand": "NZ",
 }
 
 def verify_document_with_kycaid(*, document_file, document_type, country_code):
+    """
+    Submit a document to the KYCAID API for verification.
+
+    document_type must be one of our internal types: passport, national_id, driving_licence.
+    These are mapped to the correct KYCAID API identifiers via DOCUMENT_TYPE_MAP.
+    country_code must be a valid ISO 3166-1 alpha-2 code (e.g. 'AE', 'US').
+    Returns a dict with 'verification_id' on success, raises on API failure.
+    """
+    # Map internal document_type to KYCAID API type
+    kycaid_doc_type = DOCUMENT_TYPE_MAP.get(document_type)
+    if not kycaid_doc_type:
+        # Fallback: upper-case the raw value and hope for the best,
+        # but log a warning so this is visible in logs.
+        import logging
+        logging.getLogger(__name__).warning(
+            f"Unknown document_type '{document_type}' — sending uppercased to KYCAID."
+        )
+        kycaid_doc_type = document_type.upper()
+
+    # Fallback country code if missing from map
+    if not country_code:
+        import logging
+        logging.getLogger(__name__).warning(
+            "country_code is None — defaulting to 'US' for KYCAID."
+        )
+        country_code = "US"
 
     headers = {
         "Authorization": f"Token {settings.KYCAID_API_KEY}",
@@ -93,10 +187,10 @@ def verify_document_with_kycaid(*, document_file, document_type, country_code):
     upload_resp.raise_for_status()
     file_id = upload_resp.json()["file_id"]
 
-    # 3️⃣ Create document
+    # 3️⃣ Create document — use the mapped KYCAID type, NOT the raw user-supplied value
     doc_payload = {
         "applicant_id": applicant_id,
-        "type": document_type.upper(),
+        "type": kycaid_doc_type,
         "front_side_id": file_id
     }
     requests.post(f"{BASE_URL}/documents", json=doc_payload, headers=headers).raise_for_status()

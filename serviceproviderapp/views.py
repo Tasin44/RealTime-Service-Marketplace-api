@@ -651,21 +651,25 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             document_front=document_front,
             status="pending"
         )
-            # if not country_code:
-            #     raise ValueError("Invalid or unsupported country for KYC")
-        result = verify_document_with_kycaid(
-            document_file=document_front,
-            document_type=document_type,
-            # country_code=provider.provider_country[:2].upper()
-            country_code = COUNTRY_ISO_MAP.get(provider.provider_country)
 
-        )
+        try:
+            result = verify_document_with_kycaid(
+                document_file=document_front,
+                document_type=document_type,
+                country_code=COUNTRY_ISO_MAP.get(provider.provider_country)
+            )
+            doc.verification_id = result["verification_id"]
+        except Exception as kycaid_err:
+            # KYCAID call failed — document is still saved locally with no verification_id.
+            # Log the error so it's visible in server logs.
+            import logging
+            logging.getLogger(__name__).error(
+                f"KYCAID verification failed for document {doc.id}: {kycaid_err}"
+            )
+            doc.verification_id = None
 
-        doc.verification_id = result["verification_id"]
-        # doc.status = "verified" if result["verified"] else "failed"
         doc.status = "pending"
         doc.save()
-
 
         return Response(
             ProviderDocumentSerializer(doc).data,
@@ -704,13 +708,20 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
             status="pending"
         )
 
-        result = verify_document_with_kycaid(
-            document_file=document_front,
-            document_type=document_type,
-            country_code=COUNTRY_ISO_MAP.get(provider.provider_country)
-        )
+        try:
+            result = verify_document_with_kycaid(
+                document_file=document_front,
+                document_type=document_type,
+                country_code=COUNTRY_ISO_MAP.get(provider.provider_country)
+            )
+            doc.verification_id = result["verification_id"]
+        except Exception as kycaid_err:
+            import logging
+            logging.getLogger(__name__).error(
+                f"KYCAID verification failed for document {doc.id}: {kycaid_err}"
+            )
+            doc.verification_id = None
 
-        doc.verification_id = result["verification_id"]
         doc.status = "pending"
         doc.save()
 
@@ -789,8 +800,8 @@ def stripe_connect_onboard(request):
 
     account_link = stripe.AccountLink.create(
         account=account_id,
-        refresh_url=f"{settings.BASE_URL}/provider/stripe/refresh",  # Update with your frontend URL
-        return_url=f"{settings.BASE_URL}/provider/stripe/onboard-complete/?account_id={account_id}",
+        refresh_url=request.build_absolute_uri('/provider/stripe/onboard/'),
+        return_url=request.build_absolute_uri(f'/provider/stripe/onboard-complete/?account_id={account_id}'),
         type='account_onboarding',
     )
 
