@@ -197,3 +197,44 @@ def notify_review_created(review):
     }
     _send_and_store(provider_user, "review_created", title, body, data)
     logger.info("Review notification sent. review_id=%s", review.id)
+
+
+def notify_provider_verified(provider_profile):
+    """Notify provider via push notification and email when their profile is verified."""
+    import resend
+    from django.conf import settings as django_settings
+
+    provider_user = provider_profile.user
+    name = provider_user.name or provider_user.email
+
+    # Push notification
+    title = "Profile Verified!"
+    body = "Congratulations! Your provider profile has been verified. You are now visible to clients."
+    data = {
+        "type": "provider_verified",
+        "provider_profile_id": str(provider_profile.id),
+    }
+    _send_and_store(provider_user, "provider_verified", title, body, data)
+    logger.info("Provider verified notification sent. provider_profile_id=%s", provider_profile.id)
+
+    # Email notification via Resend
+    try:
+        resend.api_key = django_settings.RESEND_API_KEY
+        resend.Emails.send({
+            "from": "noreply@mychiripa.com",
+            "to": [provider_user.email],
+            "subject": "Your Chiripa Provider Profile is Verified!",
+            "html": f"""
+                <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6;">
+                    <h2>Profile Verified &#10003;</h2>
+                    <p>Dear {name},</p>
+                    <p>Great news! Your provider profile on <strong>Chiripa</strong> has been successfully verified.</p>
+                    <p>You are now visible to clients and can start receiving service requests.</p>
+                    <br>
+                    <p>Best regards,<br>Chiripa Team</p>
+                </div>
+            """
+        })
+        logger.info("Provider verified email sent to %s", provider_user.email)
+    except Exception as e:
+        logger.error("Failed to send provider verified email to %s: %s", provider_user.email, e)

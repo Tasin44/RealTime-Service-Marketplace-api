@@ -2,6 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from messageapp.models import Conversation
 from quoteapp.models import Quotation, Order
+from serviceproviderapp.models import ProviderProfile
 from .notification_helpers import (
     notify_conversation_status,
     notify_quotation_status,
@@ -9,6 +10,7 @@ from .notification_helpers import (
     notify_order_paid,
     notify_order_completed,
     notify_order_cancelled,
+    notify_provider_verified,
 )
 
 
@@ -96,3 +98,17 @@ def order_post_save_notification(sender, instance, created, **kwargs):
             notify_order_completed(instance)
         elif cur_status == "cancelled":
             notify_order_cancelled(instance)
+
+
+@receiver(pre_save, sender=ProviderProfile)
+def provider_profile_before_save(sender, instance, **kwargs):
+    _stash_previous_value(instance, ProviderProfile, "provider_is_verified", "_previous_provider_is_verified")
+
+
+@receiver(post_save, sender=ProviderProfile)
+def provider_profile_verified_notification(sender, instance, created, **kwargs):
+    if created:
+        return
+    previous = getattr(instance, "_previous_provider_is_verified", None)
+    if previous is False and instance.provider_is_verified is True:
+        notify_provider_verified(instance)

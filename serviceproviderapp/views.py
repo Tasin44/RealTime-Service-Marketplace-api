@@ -223,7 +223,8 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
                 )
 
         # queryset = self.get_queryset().filter(user__role='provider')
-        queryset = self.get_queryset().filter(provider_profile_setup_done=True).exclude(user=request.user)
+        queryset = self.get_queryset().filter(provider_profile_setup_done=True, provider_is_verified=True).exclude(user=request.user)
+
         '''
         ❌Previous issue: When a user becomes provider, he also see him on the provider list, to get rid of this, I just include user_role='provider'
 
@@ -672,7 +673,10 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         doc.save()
 
         return Response(
-            ProviderDocumentSerializer(doc).data,
+            {
+                "message": "Document Submitted successfully, Verification Pending ",
+                "data": ProviderDocumentSerializer(doc).data
+            },
             status=status.HTTP_201_CREATED
         )
 
@@ -726,7 +730,10 @@ class ProviderProfileViewSet(StandardResponseMixin,viewsets.ModelViewSet):
         doc.save()
 
         return Response(
-            ProviderDocumentSerializer(doc).data,
+            {
+                "message": "Document Submitted successfully, Verification Pending ",
+                "data": ProviderDocumentSerializer(doc).data
+            },
             status=status.HTTP_201_CREATED
         )
 
