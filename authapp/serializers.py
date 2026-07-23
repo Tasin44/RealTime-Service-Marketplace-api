@@ -11,7 +11,7 @@ from .models import OTP
 from .utils import validate_and_get_otp
 from servicereceiverapp.models import ReceiverProfile
 from django.conf import settings
-from serviceproviderapp.models import ProviderProfile
+from serviceproviderapp.models import ProviderProfile, ProviderDocument
 
 
 resend.api_key = settings.RESEND_API_KEY
@@ -193,10 +193,13 @@ class ConfirmDeleteUserSerializer(serializers.Serializer):
 class MeSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     provider_profile_setup_done = serializers.SerializerMethodField()
+    document_type = serializers.SerializerMethodField()
+    verification_id = serializers.SerializerMethodField()
+    provider_is_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "name", "image", "role", "verified","provider_profile_setup_done"]
+        fields = ["id", "email", "name", "image", "role", "verified", "provider_profile_setup_done", "document_type", "verification_id", "provider_is_verified"]
 
     def get_image(self, obj):
         if not obj.image:
@@ -205,6 +208,27 @@ class MeSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.image.url)
         return f"{settings.BASE_URL.rstrip('/')}{obj.image.url}"
-    
+
     def get_provider_profile_setup_done(self, obj):
         return ProviderProfile.objects.filter(user=obj).exists()
+
+    def _get_latest_document(self, obj):
+        try:
+            profile = ProviderProfile.objects.get(user=obj)
+            return ProviderDocument.objects.filter(provider=profile).order_by('-uploaded_at').first()
+        except ProviderProfile.DoesNotExist:
+            return None
+
+    def get_document_type(self, obj):
+        doc = self._get_latest_document(obj)
+        return doc.document_type if doc else None
+
+    def get_verification_id(self, obj):
+        doc = self._get_latest_document(obj)
+        return doc.verification_id if doc else None
+
+    def get_provider_is_verified(self, obj):
+        try:
+            return ProviderProfile.objects.get(user=obj).provider_is_verified
+        except ProviderProfile.DoesNotExist:
+            return None
