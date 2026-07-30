@@ -773,8 +773,13 @@ def is_stripe_supported_country(country_code):
         return False
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def stripe_connect_onboard(request):
+    if not request.user or not request.user.is_authenticated:
+        if request.method == 'GET':
+            return render(request, "failure.html")
+        return Response({"detail": "Authentication credentials were not provided."}, status=401)
+
     try:
         provider = ProviderProfile.objects.get(user=request.user)
     except ProviderProfile.DoesNotExist:
